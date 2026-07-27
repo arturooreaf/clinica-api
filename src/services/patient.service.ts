@@ -1,4 +1,4 @@
-import * as patientData from "../data/patient.data"
+import * as patientData from "../repository/patient.data"
 import {Patient, CreatePatientInput, UpdatePatientInput} from "../types/patient"
 
 export async function listPatients(): Promise <Patient[]> {
