@@ -31,13 +31,6 @@ export async function getPatientById(req: Request, res: Response) {
 export async function createPatient(req: Request, res: Response) {
   try {
     const { name, age, diagnosis } = req.body;
-    if (
-      typeof name !== "string" ||
-      typeof age !== "number" ||
-      (diagnosis !== undefined && typeof diagnosis !== "string")
-    ) {
-      return res.status(400).json({ error: "Datos inválidos" });
-    }
     const newPatient = await patientService.createPatient({ name, age, diagnosis });
     res.status(201).json(newPatient);
   } catch (error) {
