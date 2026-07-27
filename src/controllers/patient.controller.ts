@@ -72,3 +72,4 @@ export async function deletePatient(req: Request, res: Response) {
     res.status(500).json({ error: "Error al eliminar el paciente" });
   }
 }
+
