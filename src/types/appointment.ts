@@ -4,8 +4,13 @@ patient_id: number
 date: Date
 reason?: string
 }
-export interface createAppointment {
+export interface CreateAppointment {
+    patient_id: number 
     date: Date
     reason?: string
     
+}
+export interface UpdateAppointment {
+    date? : Date
+    reason?: string
 }
