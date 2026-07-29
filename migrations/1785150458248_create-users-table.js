@@ -11,11 +11,7 @@ export const shorthands = undefined;
 export const up = (pgm) => {
     pgm.createTable('users', {
         id: 'id',
-        user_id: {
-          type: 'integer' ,
-          notNull: true,
-          onDelete: 'CASCADE',
-        },
+        
         email: {type: 
                 'varchar(100)', notNull: true, unique: true 
 
