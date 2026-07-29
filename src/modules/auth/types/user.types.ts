@@ -16,3 +16,8 @@ export interface CreateUserInput {
     password_hash: string 
     name: string
 }
+export interface UserView {
+    id: number
+    email: string
+    name: string
+}

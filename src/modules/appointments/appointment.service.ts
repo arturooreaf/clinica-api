@@ -1,5 +1,5 @@
-import * as AppointmentData from  "../repository/appointment.data"
-import { Appointment, UpdateAppointment, CreateAppointment } from "../types/appointment"
+import * as AppointmentData from  "./infra/repositories/appointment.repository"
+import { Appointment, UpdateAppointment, CreateAppointment } from "./types/appointment.types"
 
 export async function listAppointments():Promise <Appointment[]> {
     return AppointmentData.getAll();

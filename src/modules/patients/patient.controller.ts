@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import * as patientService from "../services/patient.service";
+import * as patientService from "./patient.service";
 
 export async function getPatients(_req: Request, res: Response) {
   try {

@@ -1,6 +1,6 @@
 
-import { pool } from "../db/pool";
-import { Patient, CreatePatientInput,UpdatePatientInput } from "../types/patient";
+import { pool } from "../../../../database/pool";
+import { Patient, CreatePatientInput,UpdatePatientInput } from "../../types/patient.types";
 
 //Leemos todos los resultados. 
 
