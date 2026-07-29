@@ -1,8 +1,8 @@
 import express from "express";
-import patientRoutes from "./routes/patient.routes";
-import appointmentRoutes from "./routes/appointment.routes";
-import logger from "./middlewares/logger.middleware";
-import errorHandle from "./middlewares/error.middleware";
+import patientRoutes from "./modules/patients/patient.routes";
+import appointmentRoutes from "./modules/appointments/appointment.routes";
+import logger from "./common/middlewares/logger.middleware";
+import errorHandle from "./common/middlewares/error.middleware";
 
 const app = express();
 const port = 3000;

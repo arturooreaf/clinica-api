@@ -1,6 +1,6 @@
 import { Router } from "express";
-import * as patientController from "../controllers/patient.controller";
-import validateCreatePatient from "../middlewares/validatePatient.middleware";
+import * as patientController from "./patient.controller";
+import validateCreatePatient from "./patient.validation.middleware";
 
 const router = Router();
 

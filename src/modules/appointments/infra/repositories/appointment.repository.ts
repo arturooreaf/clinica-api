@@ -1,5 +1,5 @@
-import { pool } from "../db/pool";
-import { Appointment, CreateAppointment, UpdateAppointment } from "../types/appointment";
+import { pool } from "../../../../database/pool";
+import { Appointment, CreateAppointment, UpdateAppointment } from "../../types/appointment.types";
 
 
 export async function getAll(): Promise <Appointment[]> {
