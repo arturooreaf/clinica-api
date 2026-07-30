@@ -1,8 +1,11 @@
 import type { Request, Response, NextFunction } from "express";
 
 // Middleware de ruta: se monta solo en el POST de crear paciente
-function validateCreatePatient(req: Request, res: Response, next: NextFunction) {
- 
+function validateCreatePatient(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   const { name, age, diagnosis } = req.body;
   if (
     typeof name !== "string" ||

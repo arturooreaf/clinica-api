@@ -12,8 +12,8 @@ app.use(express.json());
 app.use(logger);
 
 // rutas
-app.get('/', (_req, res) => {
-  res.send('Bienvenido a Careexpand');
+app.get("/", (_req, res) => {
+  res.send("Bienvenido a Careexpand");
 });
 app.use("/patients", patientRoutes);
 app.use("/appointments", appointmentRoutes);
