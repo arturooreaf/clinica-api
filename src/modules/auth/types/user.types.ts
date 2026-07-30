@@ -21,3 +21,11 @@ export interface UserView {
     email: string
     name: string
 }
+ export interface LoginInput {
+    email: string
+    password: string 
+ }
+ export interface LoginResult {
+    token: string
+    user : UserView
+ }
