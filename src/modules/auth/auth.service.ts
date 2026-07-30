@@ -8,9 +8,18 @@ import {
   UserView,
 } from "./types/user.types";
 
-// Se comprueba UNA vez, al arrancar la app (fail fast).
-// Si falta el secreto, el servidor no arranca en lugar de fallar en el primer login.
-const JWT_SECRET = process.env.JWT_SECRET;
+
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`La variable de entorno ${name} no está definida`);
+  }
+  return value;
+}
+
+
+const JWT_SECRET = requireEnv("JWT_SECRET");
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET no está definido en el .env");
@@ -51,3 +60,6 @@ export async function login(data: LoginInput): Promise<LoginResult | null> {
     user: { id: user.id, email: user.email, name: user.name },
   };
 }
+
+
+
