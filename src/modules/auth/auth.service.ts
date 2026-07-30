@@ -8,8 +8,6 @@ import {
   UserView,
 } from "./types/user.types";
 
-
-
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -18,20 +16,16 @@ function requireEnv(name: string): string {
   return value;
 }
 
-
 const JWT_SECRET = requireEnv("JWT_SECRET");
-
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET no está definido en el .env");
-}
 
 export async function register(
   data: RegisterUserInput,
 ): Promise<UserView | null> {
   const userExisting = await userRepository.findByEmail(data.email);
-
   if (userExisting) return null;
+
   const password_hash = await bcrypt.hash(data.password, 10);
+
   const newUser = await userRepository.create({
     email: data.email,
     password_hash,
@@ -49,10 +43,8 @@ export async function login(data: LoginInput): Promise<LoginResult | null> {
     data.password,
     user.password_hash,
   );
-
   if (!passwordMatches) return null;
 
-  // El payload es público (Base64, cualquiera lo puede leer): solo el id.
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "1h" });
 
   return {
@@ -60,6 +52,3 @@ export async function login(data: LoginInput): Promise<LoginResult | null> {
     user: { id: user.id, email: user.email, name: user.name },
   };
 }
-
-
-
