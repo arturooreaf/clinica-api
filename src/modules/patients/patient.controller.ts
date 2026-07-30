@@ -31,7 +31,11 @@ export async function getPatientById(req: Request, res: Response) {
 export async function createPatient(req: Request, res: Response) {
   try {
     const { name, age, diagnosis } = req.body;
-    const newPatient = await patientService.createPatient({ name, age, diagnosis });
+    const newPatient = await patientService.createPatient({
+      name,
+      age,
+      diagnosis,
+    });
     res.status(201).json(newPatient);
   } catch (error) {
     console.error(error);
@@ -72,4 +76,3 @@ export async function deletePatient(req: Request, res: Response) {
     res.status(500).json({ error: "Error al eliminar el paciente" });
   }
 }
-
