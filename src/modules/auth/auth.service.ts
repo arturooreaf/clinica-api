@@ -1,13 +1,53 @@
-import bcrypt from "bcrypt"
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import * as userRepository from "./infra/repositories/user.repository";
-import { CreateUserInput, RegisterUserInput, UserView } from "./types/user.types";
+import {
+  LoginInput,
+  LoginResult,
+  RegisterUserInput,
+  UserView,
+} from "./types/user.types";
 
-export async function register(data:RegisterUserInput): Promise <UserView | null> {
-    const userExisting  = await userRepository.findByEmail(data.email)
+// Se comprueba UNA vez, al arrancar la app (fail fast).
+// Si falta el secreto, el servidor no arranca en lugar de fallar en el primer login.
+const JWT_SECRET = process.env.JWT_SECRET;
 
-    if(userExisting) return null;
-     const password_hash = await bcrypt.hash(data.password, 10)
-     const newUser = await userRepository.create({email: data.email, password_hash, name: data.name })
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET no está definido en el .env");
+}
 
-     return {id: newUser.id, email: newUser.email, name: newUser.name}
+export async function register(
+  data: RegisterUserInput,
+): Promise<UserView | null> {
+  const userExisting = await userRepository.findByEmail(data.email);
+
+  if (userExisting) return null;
+  const password_hash = await bcrypt.hash(data.password, 10);
+  const newUser = await userRepository.create({
+    email: data.email,
+    password_hash,
+    name: data.name,
+  });
+
+  return { id: newUser.id, email: newUser.email, name: newUser.name };
+}
+
+export async function login(data: LoginInput): Promise<LoginResult | null> {
+  const user = await userRepository.findByEmail(data.email);
+  if (!user) return null;
+
+  const passwordMatches = await bcrypt.compare(
+    data.password,
+    user.password_hash,
+  );
+
+  if (!passwordMatches) return null;
+
+  // El payload es público (Base64, cualquiera lo puede leer): solo el id.
+  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "1h" });
+
+  return {
+    token,
+    user: { id: user.id, email: user.email, name: user.name },
+  };
 }
