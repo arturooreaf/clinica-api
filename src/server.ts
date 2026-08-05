@@ -4,6 +4,8 @@ import appointmentRoutes from "./modules/appointments/appointment.routes";
 import logger from "./common/middlewares/logger.middleware";
 import errorHandle from "./common/middlewares/error.middleware";
 import authRoutes from "./modules/auth/auth.routes"
+import { generalLimiter } from "./common/middlewares/rateLimit.middleware";
+
 const app = express();
 const port = 3000;
 
@@ -11,8 +13,7 @@ const port = 3000;
 
 app.use(express.json());
 app.use(logger);
-app.use(authRoutes)
-
+app.use(generalLimiter);
 // rutas
 app.get("/", (_req, res) => {
   res.send("Bienvenido a Careexpand");
