@@ -1,5 +1,5 @@
-
-
+import dotenv from "dotenv";
+dotenv.config();
 export function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -9,3 +9,4 @@ export function requireEnv(name: string): string {
 }
 
 export const JWT_SECRET = requireEnv("JWT_SECRET");
+export const DATABASE_URL = requireEnv("DATABASE_URL");
