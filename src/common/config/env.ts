@@ -7,6 +7,6 @@ export function requireEnv(name: string): string {
   }
   return value;
 }
-
+export const CORS_ORIGIN = requireEnv("CORS_ORIGIN");
 export const JWT_SECRET = requireEnv("JWT_SECRET");
 export const DATABASE_URL = requireEnv("DATABASE_URL");
