@@ -1,9 +1,8 @@
 import { Pool } from "pg";
-import dotenv from "dotenv";
-dotenv.config();
+import { DATABASE_URL } from "../common/config/env";
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: DATABASE_URL
 });
 
 pool.on("error", (err) => {
