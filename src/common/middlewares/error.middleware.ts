@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { logger } from "../logger";
 
 function errorHandle(
   err: Error,
@@ -6,7 +7,7 @@ function errorHandle(
   res: Response,
   next: NextFunction,
 ) {
-  console.error(err);
+  logger.error({ err }, "Error no controlado");
   res.status(500).json({ error: "Error interno del servidor" });
 }
 

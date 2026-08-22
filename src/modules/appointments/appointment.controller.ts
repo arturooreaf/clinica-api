@@ -1,13 +1,14 @@
 import type { Request, Response } from "express";
 import * as appointmentService from "./appointment.service";
+import { logger } from "../../common/logger";
 
 export async function getAppointments(_req: Request, res: Response) {
   try {
     const appointment = await appointmentService.listAppointments();
     res.status(200).json(appointment);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: " Error al obtener las citas" });
+    logger.error({ err: error }, "Error al obtener las citas");
+    res.status(500).json({ error: "Error al obtener las citas" });
   }
 }
 
@@ -15,7 +16,7 @@ export async function getAppointmentById(req: Request, res: Response) {
   try {
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
-      return res.status(400).json({ error: "el id debe ser un numero" });
+      return res.status(400).json({ error: "El id debe ser un número" });
     }
     const appointment = await appointmentService.getAppointmentById(id);
     if (!appointment) {
@@ -23,7 +24,7 @@ export async function getAppointmentById(req: Request, res: Response) {
     }
     res.status(200).json(appointment);
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error }, "Error al obtener la cita");
     res.status(500).json({ error: "Error al obtener la cita" });
   }
 }
@@ -38,7 +39,7 @@ export async function createAppointment(req: Request, res: Response) {
     });
     res.status(201).json(newAppointment);
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error }, "Error al crear la cita");
     res.status(500).json({ error: "Error al crear la cita" });
   }
 }
@@ -47,16 +48,16 @@ export async function updateAppointment(req: Request, res: Response) {
   try {
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
-      return res.status(400).json({ error: "el id debe ser un numero" });
+      return res.status(400).json({ error: "El id debe ser un número" });
     }
     const update = await appointmentService.updateAppointment(id, req.body);
     if (!update) {
-      return res.status(404).json({ error: "cita no encontrada" });
+      return res.status(404).json({ error: "Cita no encontrada" });
     }
 
     res.status(200).json(update);
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error }, "Error al actualizar la cita");
     res.status(500).json({ error: "Error al actualizar la cita" });
   }
 }
@@ -65,14 +66,14 @@ export async function deleteAppointment(req: Request, res: Response) {
   try {
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
-      return res.status(400).json({ error: "Necesita ser un numero" });
+      return res.status(400).json({ error: "El id debe ser un número" });
     }
     const remove = await appointmentService.deleteAppointment(id);
-    if (!remove) return res.status(404).json({ error: "cita no encontrada" });
+    if (!remove) return res.status(404).json({ error: "Cita no encontrada" });
 
     res.status(204).send();
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error al borrar la cita " });
+    logger.error({ err: error }, "Error al borrar la cita");
+    res.status(500).json({ error: "Error al borrar la cita" });
   }
 }

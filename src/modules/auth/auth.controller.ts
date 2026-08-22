@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import * as authService from "./auth.service";
+import { logger } from "../../common/logger";
 
 export async function register(req: Request, res: Response) {
   try {
@@ -10,7 +11,7 @@ export async function register(req: Request, res: Response) {
     }
     res.status(201).json(newUser);
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error }, "Error al registrar el usuario");
     res.status(500).json({ error: "Error al registrar el usuario" });
   }
 }
@@ -23,7 +24,7 @@ export async function login(req: Request, res: Response) {
     }
     res.status(200).json(result);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error al  iniciar sesion" });
+    logger.error({ err: error }, "Error al iniciar sesión");
+    res.status(500).json({ error: "Error al iniciar sesión" });
   }
 }
