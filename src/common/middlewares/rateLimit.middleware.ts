@@ -1,4 +1,3 @@
-
 import rateLimit from "express-rate-limit";
 
 // Estricto: solo para login y registro
@@ -8,7 +7,7 @@ export const authLimiter = rateLimit({
   message: { error: "Demasiados intentos. Inténtalo de nuevo en 15 minutos." },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true,  // Solo cuentan los intentos que fallan
+  skipSuccessfulRequests: true, // Solo cuentan los intentos que fallan
 });
 
 // General: para el resto de la API
