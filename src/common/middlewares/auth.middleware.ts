@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/env";
+import { logger } from "../logger";
 
 export function authMiddleware(
   req: Request,
@@ -17,12 +18,11 @@ export function authMiddleware(
     return res.status(401).json({ error: "Token no proporcionado" });
   }
   try {
-
-   const payload = jwt.verify(token, JWT_SECRET) as { userId: number };
+    const payload = jwt.verify(token, JWT_SECRET) as { userId: number };
     req.user = payload;
     next();
   } catch (error) {
+    logger.warn({ err: error }, "Token invalido o expirado");
     res.status(401).json({ error: "Token invalido o expirado" });
-    console.error(error);
   }
 }
