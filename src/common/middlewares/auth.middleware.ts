@@ -17,7 +17,9 @@ export function authMiddleware(
     return res.status(401).json({ error: "Token no proporcionado" });
   }
   try {
-    jwt.verify(token, JWT_SECRET);
+
+   const payload = jwt.verify(token, JWT_SECRET) as { userId: number };
+    req.user = payload;
     next();
   } catch (error) {
     res.status(401).json({ error: "Token invalido o expirado" });
