@@ -2,7 +2,7 @@ import { Router } from "express";
 import * as appointmentController from "./appointment.controller";
 import { authMiddleware } from "../../common/middlewares/auth.middleware";
 const router = Router();
-router.use(authMiddleware)
+router.use(authMiddleware);
 router.get("/", appointmentController.getAppointments); //GET  /appointments
 router.get("/:id", appointmentController.getAppointmentById); // GET /appointments/:id
 router.post("/", appointmentController.createAppointment); // POST  /appointments/

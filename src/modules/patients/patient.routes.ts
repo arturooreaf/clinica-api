@@ -6,7 +6,7 @@ const router = Router();
 router.use(authMiddleware);
 router.get("/", patientController.getPatients); // GET    /patients
 router.get("/:id", patientController.getPatientById); // GET    /patients/:id
-router.post("/", validateCreatePatient, patientController.createPatient); // POST   /users
+router.post("/", validateCreatePatient, patientController.createPatient); // POST   /patients
 router.patch("/:id", patientController.updatePatient); // PATCH  /patients/:id
 router.delete("/:id", patientController.deletePatient); // DELETE /patients/:id
 
