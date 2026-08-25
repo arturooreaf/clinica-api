@@ -1,5 +1,5 @@
 import * as patientData from "./infra/repositories/patient.repository";
-import { logger } from "../../common/logger";  
+import { logger } from "../../common/logger";
 import {
   Patient,
   CreatePatientInput,
@@ -7,23 +7,54 @@ import {
 } from "./types/patient.types";
 
 export async function listPatients(): Promise<Patient[]> {
-    logger.info("Listando pacientes");   
-  return patientData.getAll();
+  const patients = await patientData.getAll();
+  logger.debug({ count: patients.length }, "Pacientes listados");
+  return patients;
 }
+
 export async function getPatientById(id: number): Promise<Patient | undefined> {
-  return patientData.getById(id);
+  const patient = await patientData.getById(id);
+  if (!patient) {
+    logger.debug({ patientId: id }, "Paciente no encontrado");
+    return undefined;
+  }
+  logger.debug({ patientId: id }, "Paciente consultado");
+  return patient;
 }
+
 export async function createPatient(
   data: CreatePatientInput,
 ): Promise<Patient> {
-  return patientData.create(data);
+  const patient = await patientData.create(data);
+  logger.info({ patientId: patient.id }, "Paciente creado");
+  return patient;
 }
+
 export async function updatePatient(
   id: number,
   data: UpdatePatientInput,
 ): Promise<Patient | undefined> {
-  return patientData.update(id, data);
+  const patient = await patientData.update(id, data);
+  if (!patient) {
+    logger.warn(
+      { patientId: id },
+      "Actualizacion fallida: el paciente no existe",
+    );
+    return undefined;
+  }
+  logger.info(
+    { patientId: id, fields: Object.keys(data) },
+    "Paciente actualizado",
+  );
+  return patient;
 }
+
 export async function deletePatient(id: number): Promise<boolean> {
-  return patientData.remove(id);
+  const deleted = await patientData.remove(id);
+  if (!deleted) {
+    logger.warn({ patientId: id }, "Borrado fallido: el paciente no existe");
+    return false;
+  }
+  logger.info({ patientId: id }, "Paciente eliminado");
+  return true;
 }

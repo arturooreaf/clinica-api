@@ -26,5 +26,5 @@ app.use("/auth", authRoutes);
 app.use(errorHandle);
 
 app.listen(port, () => {
-  logger.info(`Example app listening on port ${port}`);
+  logger.info(`Servidor escuchando en el puerto ${port}`);
 });
