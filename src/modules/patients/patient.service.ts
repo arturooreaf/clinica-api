@@ -1,4 +1,5 @@
 import * as patientData from "./infra/repositories/patient.repository";
+import { logger } from "../../common/logger";  
 import {
   Patient,
   CreatePatientInput,
@@ -6,6 +7,7 @@ import {
 } from "./types/patient.types";
 
 export async function listPatients(): Promise<Patient[]> {
+    logger.info("Listando pacientes");   
   return patientData.getAll();
 }
 export async function getPatientById(id: number): Promise<Patient | undefined> {
