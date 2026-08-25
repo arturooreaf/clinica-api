@@ -1,25 +1,26 @@
 import type { Request, Response, NextFunction } from "express";
 import { randomUUID } from "node:crypto";
 import { logger } from "../logger";
+import { requestContext } from "../context";
 
 function requestLogger(req: Request, res: Response, next: NextFunction) {
-  const start = Date.now();
-
   const traceId = randomUUID();
-  res.on("finish", () => {
-    const ms = Date.now() - start;
+  res.setHeader("X-Trace-Id", traceId);
 
-    logger.info({
-      traceId,
-      method: req.method,
-      url: req.originalUrl,
-      status: res.statusCode,
-      ms,
+  requestContext.run({ traceId }, () => {
+    const start = Date.now();
 
+    res.on("finish", () => {
+      logger.info({
+        method: req.method,
+        url: req.originalUrl,
+        status: res.statusCode,
+        ms: Date.now() - start,
+      });
     });
+
+    next();
   });
-res.setHeader("X-Trace-Id", traceId);
-  next();
 }
 
 export default requestLogger;
