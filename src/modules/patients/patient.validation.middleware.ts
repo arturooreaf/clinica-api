@@ -20,3 +20,6 @@ function validateCreatePatient(
 }
 
 export default validateCreatePatient;
+
+
+

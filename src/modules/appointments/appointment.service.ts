@@ -1,4 +1,5 @@
 import * as AppointmentData from "./infra/repositories/appointment.repository";
+import { logger } from "../../common/logger";
 import {
   Appointment,
   UpdateAppointment,
@@ -6,24 +7,59 @@ import {
 } from "./types/appointment.types";
 
 export async function listAppointments(): Promise<Appointment[]> {
-  return AppointmentData.getAll();
+  const appointments = await AppointmentData.getAll();
+  logger.debug({ count: appointments.length }, "Citas listadas");
+  return appointments;
 }
+
 export async function getAppointmentById(
   id: number,
 ): Promise<Appointment | undefined> {
-  return AppointmentData.getById(id);
+  const appointment = await AppointmentData.getById(id);
+  if (!appointment) {
+    logger.debug({ appointmentId: id }, "Cita no encontrada");
+    return undefined;
+  }
+  logger.debug({ appointmentId: id }, "Cita consultada");
+  return appointment;
 }
+
 export async function createAppointment(
   data: CreateAppointment,
 ): Promise<Appointment> {
-  return AppointmentData.create(data);
+  const appointment = await AppointmentData.create(data);
+  logger.info(
+    { appointmentId: appointment.id, patientId: appointment.patient_id },
+    "Cita creada",
+  );
+  return appointment;
 }
+
 export async function updateAppointment(
   id: number,
   data: UpdateAppointment,
 ): Promise<Appointment | undefined> {
-  return AppointmentData.update(id, data);
+  const appointment = await AppointmentData.update(id, data);
+  if (!appointment) {
+    logger.warn(
+      { appointmentId: id },
+      "Actualizacion fallida: la cita no existe",
+    );
+    return undefined;
+  }
+  logger.info(
+    { appointmentId: id, fields: Object.keys(data) },
+    "Cita actualizada",
+  );
+  return appointment;
 }
+
 export async function deleteAppointment(id: number): Promise<boolean> {
-  return AppointmentData.remove(id);
+  const deleted = await AppointmentData.remove(id);
+  if (!deleted) {
+    logger.warn({ appointmentId: id }, "Borrado fallido: la cita no existe");
+    return false;
+  }
+  logger.info({ appointmentId: id }, "Cita eliminada");
+  return true;
 }

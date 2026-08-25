@@ -28,3 +28,4 @@ export async function login(req: Request, res: Response) {
     res.status(500).json({ error: "Error al iniciar sesión" });
   }
 }
+
