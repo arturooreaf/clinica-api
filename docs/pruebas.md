@@ -227,9 +227,3 @@ memoria.
 | 500 en todo lo que toca datos | El contenedor no está levantado | `docker compose up -d` |
 | 401 de repente en todo | El token ha caducado | Repetir el paso 5 |
 | 429 en el login | Límite de intentos alcanzado | Esperar 15 min o reiniciar |
-
-
-
-logs TRACE ID 
-
-Resend api Integrar creamos un ENDPOINT BODY correo y texto
