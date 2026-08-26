@@ -7,6 +7,7 @@ import authRoutes from "./modules/auth/auth.routes";
 import { generalLimiter } from "./common/middlewares/rateLimit.middleware";
 import { corsMiddleware } from "./common/middlewares/cors.middleware";
 import { logger } from "./common/logger";
+import emailRoutes from "./modules/email/email.routes";
 const app = express();
 const port = 3000;
 
@@ -22,6 +23,7 @@ app.get("/", (_req, res) => {
 app.use("/patients", patientRoutes);
 app.use("/appointments", appointmentRoutes);
 app.use("/auth", authRoutes);
+app.use("/emails", emailRoutes);
 // manejador de errores
 app.use(errorHandle);
 
