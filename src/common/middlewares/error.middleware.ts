@@ -5,7 +5,7 @@ function errorHandle(
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction,
+  _next: NextFunction,
 ) {
   logger.error({ err }, "Error no controlado");
   res.status(500).json({ error: "Error interno del servidor" });
