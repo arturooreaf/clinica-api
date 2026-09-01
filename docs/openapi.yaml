@@ -1,0 +1,605 @@
+openapi: 3.0.3
+
+info:
+  title: API Careexpand
+  version: 1.0.0
+  description: |
+    API de gestión de pacientes y citas médicas.
+
+    Autenticación por JWT (Bearer). El token se obtiene en `POST /auth/login`
+    y caduca a la hora.
+
+    Todas las respuestas de error tienen la misma forma: `{ "error": "mensaje" }`.
+
+servers:
+  - url: http://localhost:3000
+    description: Local
+
+# Seguridad por defecto para TODA la API.
+# Los endpoints públicos la anulan con `security: []`.
+# Es lo mismo que en Postman: auth a nivel de colección + "No Auth" donde no toca.
+security:
+  - bearerAuth: []
+
+tags:
+  - name: General
+  - name: Auth
+  - name: Pacientes
+  - name: Citas
+  - name: Correo
+
+paths:
+  # ─────────────────────────────────────────────────────────────
+  /:
+    get:
+      tags: [General]
+      summary: Comprobación de que la API responde
+      security: [] # público
+      responses:
+        "200":
+          description: La API está viva
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Bienvenido a Careexpand
+
+  # ───────────────────────────── AUTH ──────────────────────────
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrar un usuario
+      security: [] # público
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserView"
+        "409":
+          description: El email ya está registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión y obtener un token
+      security: [] # público
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Token generado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "401":
+          description: |
+            Credenciales incorrectas.
+
+            Se devuelve el mismo 401 tanto si el email no existe como si la
+            contraseña es incorrecta, para no revelar qué correos están
+            registrados.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ─────────────────────────── PACIENTES ───────────────────────
+  /patients:
+    get:
+      tags: [Pacientes]
+      summary: Listar pacientes
+      responses:
+        "200":
+          description: Lista de pacientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    post:
+      tags: [Pacientes]
+      summary: Crear un paciente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePatientInput"
+      responses:
+        "201":
+          description: Paciente creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /patients/{id}:
+    # Los parámetros de ruta declarados aquí valen para los tres métodos.
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+
+    get:
+      tags: [Pacientes]
+      summary: Obtener un paciente por id
+      responses:
+        "200":
+          description: Paciente encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "400":
+          $ref: "#/components/responses/InvalidId"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    patch:
+      tags: [Pacientes]
+      summary: Actualizar parcialmente un paciente
+      description: |
+        Actualización parcial: solo se modifican los campos enviados.
+        Devuelve el paciente completo ya actualizado.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientInput"
+      responses:
+        "200":
+          description: Paciente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "400":
+          $ref: "#/components/responses/InvalidId"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    delete:
+      tags: [Pacientes]
+      summary: Eliminar un paciente
+      responses:
+        "204":
+          description: Eliminado. Sin cuerpo de respuesta.
+        "400":
+          $ref: "#/components/responses/InvalidId"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ───────────────────────────── CITAS ─────────────────────────
+  /appointments:
+    get:
+      tags: [Citas]
+      summary: Listar citas
+      responses:
+        "200":
+          description: Lista de citas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    post:
+      tags: [Citas]
+      summary: Crear una cita
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentInput"
+      responses:
+        "201":
+          description: Cita creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /appointments/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+
+    get:
+      tags: [Citas]
+      summary: Obtener una cita por id
+      responses:
+        "200":
+          description: Cita encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "400":
+          $ref: "#/components/responses/InvalidId"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    patch:
+      tags: [Citas]
+      summary: Actualizar parcialmente una cita
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentInput"
+      responses:
+        "200":
+          description: Cita actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "400":
+          $ref: "#/components/responses/InvalidId"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+    delete:
+      tags: [Citas]
+      summary: Eliminar una cita
+      responses:
+        "204":
+          description: Eliminada. Sin cuerpo de respuesta.
+        "400":
+          $ref: "#/components/responses/InvalidId"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ───────────────────────────── CORREO ────────────────────────
+  /emails:
+    post:
+      tags: [Correo]
+      summary: Enviar un correo
+      description: |
+        Envía un correo a través de Resend.
+
+        Devuelve **202** y no 201: cuando Resend responde, el correo está
+        encolado, no entregado. No se puede prometer la entrega.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendEmailInput"
+      responses:
+        "202":
+          description: Correo aceptado para envío
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendEmailResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "502":
+          description: |
+            El proveedor de correo rechazó el envío.
+
+            502 y no 500: el fallo está en un servicio del que dependemos,
+            no en esta API.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+# ═════════════════════════════════════════════════════════════════
+# Piezas reutilizables. Se definen una vez y se apuntan con $ref.
+# ═════════════════════════════════════════════════════════════════
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token obtenido en `POST /auth/login`. Caduca a la hora.
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      description: Identificador numérico del recurso
+      schema:
+        type: integer
+      example: 1
+
+  # Respuestas de error que se repiten en casi todos los endpoints.
+  responses:
+    BadRequest:
+      description: Datos de entrada inválidos
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: Datos inválidos
+
+    InvalidId:
+      description: El id no es un número
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: El id debe ser un número
+
+    Unauthorized:
+      description: Token ausente, inválido o caducado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: Token no proporcionado
+
+    NotFound:
+      description: El recurso no existe
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    TooManyRequests:
+      description: Límite de intentos alcanzado. Ventana de 15 minutos.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    ServerError:
+      description: Error interno
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Mensaje de error
+
+    # ── Pacientes ──
+    Patient:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Ana Ruiz
+        age:
+          type: integer
+          example: 34
+        diagnosis:
+          type: string
+          nullable: true
+          example: Gripe
+
+    CreatePatientInput:
+      type: object
+      required: [name, age] # diagnosis es opcional
+      properties:
+        name:
+          type: string
+          example: Ana Ruiz
+        age:
+          type: integer
+          example: 34
+        diagnosis:
+          type: string
+          example: Gripe
+
+    UpdatePatientInput:
+      type: object
+      description: Todos los campos son opcionales. Se envían solo los que cambian.
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        diagnosis:
+          type: string
+          example: Alta
+
+    # ── Citas ──
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        patient_id:
+          type: integer
+          example: 1
+        date:
+          type: string
+          format: date-time
+          example: "2026-09-15T10:30:00Z"
+        reason:
+          type: string
+          nullable: true
+          example: Revisión
+
+    CreateAppointmentInput:
+      type: object
+      required: [patient_id, date]
+      properties:
+        patient_id:
+          type: integer
+          example: 1
+        date:
+          type: string
+          format: date-time
+          example: "2026-09-15T10:30:00Z"
+        reason:
+          type: string
+          example: Revisión
+
+    UpdateAppointmentInput:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        reason:
+          type: string
+
+    # ── Auth ──
+    RegisterInput:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+          example: demo@careexpand.com
+        password:
+          type: string
+          format: password
+          example: Demo1234
+        name:
+          type: string
+          example: Usuario Demo
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: demo@careexpand.com
+        password:
+          type: string
+          format: password
+          example: Demo1234
+
+    UserView:
+      type: object
+      description: Vista pública de un usuario. Nunca incluye el hash de la contraseña.
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          example: demo@careexpand.com
+        name:
+          type: string
+          example: Usuario Demo
+
+    LoginResult:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT. Caduca a la hora.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: "#/components/schemas/UserView"
+
+    # ── Correo ──
+    SendEmailInput:
+      type: object
+      required: [to, subject, text]
+      properties:
+        to:
+          type: string
+          format: email
+          example: destinatario@ejemplo.com
+        subject:
+          type: string
+          example: Recordatorio de cita
+        text:
+          type: string
+          example: Le recordamos su cita del 15 de septiembre a las 10:30.
+
+    SendEmailResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identificador que devuelve el proveedor de correo
+          example: 4ef9bc1a-0f3e-4c2b-9d81-2f5a7c3e1b64

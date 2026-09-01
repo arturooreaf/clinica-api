@@ -8,12 +8,20 @@ import { generalLimiter } from "./common/middlewares/rateLimit.middleware";
 import { corsMiddleware } from "./common/middlewares/cors.middleware";
 import { logger } from "./common/logger";
 import emailRoutes from "./modules/email/email.routes";
+import swaggerUi from "swagger-ui-express";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import YAML from "yaml";
 const app = express();
 const port = 3000;
 
 // middlewares globales
 app.use(corsMiddleware);
 app.use(express.json());
+// documentación
+const openapiPath = path.join(__dirname, "../docs/openapi.yaml");
+const openapiDocument = YAML.parse(readFileSync(openapiPath, "utf8"));
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 app.use(requestLogger);
 app.use(generalLimiter);
 // rutas
