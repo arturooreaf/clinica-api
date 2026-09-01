@@ -1,0 +1,6 @@
+node_modules
+dist
+
+# Generado y reescrito por Postman al exportar la coleccion.
+# Formatearlo aqui provocaria un diff enorme en cada exportacion.
+docs/postman/
