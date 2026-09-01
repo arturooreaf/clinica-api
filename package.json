@@ -6,6 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/server.ts",
+    "lint": "eslint src",
+"format": "prettier --write .",
+"format:check": "prettier --check .",
     "migrate": "node-pg-migrate -j ts -m src/database/migrations"
   },
   "keywords": [],
