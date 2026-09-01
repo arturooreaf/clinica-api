@@ -119,11 +119,11 @@ curl http://localhost:3000/patients -H "Authorization: Bearer $TOKEN"
 
 ### 2.4 Respuestas sin token válido
 
-| Situación | Código | Cuerpo |
-| --- | --- | --- |
-| Sin cabecera `Authorization` | 401 | `{"error":"Token no proporcionado"}` |
-| Cabecera mal formada | 401 | `{"error":"Token no proporcionado"}` |
-| Token inválido o caducado | 401 | `{"error":"Token invalido o expirado"}` |
+| Situación                    | Código | Cuerpo                                  |
+| ---------------------------- | ------ | --------------------------------------- |
+| Sin cabecera `Authorization` | 401    | `{"error":"Token no proporcionado"}`    |
+| Cabecera mal formada         | 401    | `{"error":"Token no proporcionado"}`    |
+| Token inválido o caducado    | 401    | `{"error":"Token invalido o expirado"}` |
 
 ---
 
@@ -178,11 +178,11 @@ curl -X POST http://localhost:3000/patients \
 { "error": "Datos inválidos" }
 ```
 
-| Campo | Tipo | Obligatorio |
-| --- | --- | --- |
-| `name` | string | Sí |
-| `age` | number | Sí |
-| `diagnosis` | string | No |
+| Campo       | Tipo   | Obligatorio |
+| ----------- | ------ | ----------- |
+| `name`      | string | Sí          |
+| `age`       | number | Sí          |
+| `diagnosis` | string | No          |
 
 ### Actualizar parcialmente
 
@@ -216,12 +216,12 @@ Al eliminar un paciente se eliminan también sus citas, por la restricción
 
 Misma estructura que pacientes. Todos los endpoints requieren token.
 
-| Método | Ruta |
-| --- | --- |
-| `GET` | `/appointments` |
-| `GET` | `/appointments/:id` |
-| `POST` | `/appointments` |
-| `PATCH` | `/appointments/:id` |
+| Método   | Ruta                |
+| -------- | ------------------- |
+| `GET`    | `/appointments`     |
+| `GET`    | `/appointments/:id` |
+| `POST`   | `/appointments`     |
+| `PATCH`  | `/appointments/:id` |
 | `DELETE` | `/appointments/:id` |
 
 ### Crear
@@ -235,11 +235,11 @@ curl -X POST http://localhost:3000/appointments \
 
 **201 Created**
 
-| Campo | Tipo | Obligatorio |
-| --- | --- | --- |
-| `patient_id` | number | Sí. Debe existir el paciente |
-| `date` | timestamp ISO 8601 | Sí |
-| `reason` | string | No |
+| Campo        | Tipo               | Obligatorio                  |
+| ------------ | ------------------ | ---------------------------- |
+| `patient_id` | number             | Sí. Debe existir el paciente |
+| `date`       | timestamp ISO 8601 | Sí                           |
+| `reason`     | string             | No                           |
 
 ---
 
@@ -247,10 +247,10 @@ curl -X POST http://localhost:3000/appointments \
 
 ### 5.1 Límite de peticiones
 
-| Ámbito | Límite | Ventana |
-| --- | --- | --- |
-| `/auth/login` y `/auth/register` | 5 intentos **fallidos** | 15 min |
-| Resto de la API | 100 peticiones | 15 min |
+| Ámbito                           | Límite                  | Ventana |
+| -------------------------------- | ----------------------- | ------- |
+| `/auth/login` y `/auth/register` | 5 intentos **fallidos** | 15 min  |
+| Resto de la API                  | 100 peticiones          | 15 min  |
 
 Al superarlo se devuelve **429 Too Many Requests**.
 
@@ -317,17 +317,17 @@ localizar los fallos reales.
 
 ### 5.4 Códigos de estado
 
-| Código | Significado |
-| --- | --- |
-| 200 | Petición correcta |
-| 201 | Recurso creado |
-| 204 | Correcta, sin contenido en la respuesta |
-| 400 | Datos de entrada inválidos |
-| 401 | Sin autenticar: token ausente, inválido o caducado |
-| 404 | El recurso no existe |
-| 409 | Conflicto con el estado actual |
-| 429 | Límite de peticiones superado |
-| 500 | Error interno |
+| Código | Significado                                        |
+| ------ | -------------------------------------------------- |
+| 200    | Petición correcta                                  |
+| 201    | Recurso creado                                     |
+| 204    | Correcta, sin contenido en la respuesta            |
+| 400    | Datos de entrada inválidos                         |
+| 401    | Sin autenticar: token ausente, inválido o caducado |
+| 404    | El recurso no existe                               |
+| 409    | Conflicto con el estado actual                     |
+| 429    | Límite de peticiones superado                      |
+| 500    | Error interno                                      |
 
 ---
 
