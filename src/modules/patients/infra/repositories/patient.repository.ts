@@ -17,12 +17,15 @@ export async function getById(id: number): Promise<Patient | undefined> {
   return result.rows[0] as Patient | undefined;
 }
 
-export async function create(data: CreatePatientInput, ownerId: number ): Promise<Patient> {
+export async function create(
+  data: CreatePatientInput,
+  ownerId: number,
+): Promise<Patient> {
   const result = await pool.query(
     "INSERT INTO patients (name, age, diagnosis, owner_id) VALUES ($1, $2, $3, $4) RETURNING id, name, age, diagnosis, owner_id",
     [data.name, data.age, data.diagnosis, ownerId],
   );
-  return result.rows[0] as Patient ;
+  return result.rows[0] as Patient;
 }
 export async function update(
   id: number,

@@ -33,21 +33,18 @@ export async function createPatient(req: Request, res: Response) {
   try {
     const ownerId = req.user?.userId;
     if (!ownerId) {
-  return res.status(401).json({ error: "No autenticado" });
-}
-    const { name, age, diagnosis } = req.body;
-    const newPatient = await patientService.createPatient({
-      name,
-      age,
-      diagnosis,
-    }, 
-  ownerId);
-    res.status(201).json(newPatient);
-       
-    if(!ownerId){
-      return res.status(401).json({error: "No autenticado"})
+      return res.status(401).json({ error: "No autenticado" });
     }
-    
+    const { name, age, diagnosis } = req.body;
+    const newPatient = await patientService.createPatient(
+      {
+        name,
+        age,
+        diagnosis,
+      },
+      ownerId,
+    );
+    res.status(201).json(newPatient);
   } catch (error) {
     logger.error({ err: error }, "Error al crear el paciente");
     res.status(500).json({ error: "Error al crear el paciente" });
