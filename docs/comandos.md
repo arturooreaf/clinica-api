@@ -118,8 +118,11 @@ ejecución lo determina esa marca de tiempo, no el nombre.
 ### Conectarse a la base de datos
 
 ```bash
-docker exec -it clinica-db psql -U postgres -d clinica
+docker exec -it clinica-db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
+
+El usuario y la base de datos salen del `.env` a través del `docker-compose.yml`, así
+que se leen de las variables del propio contenedor en lugar de escribirlos a mano.
 
 Dentro de `psql`:
 
