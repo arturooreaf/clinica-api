@@ -3,6 +3,7 @@ export interface Patient {
   name: string;
   age: number;
   diagnosis?: string;
+  owner_id: number;
 }
 
 export interface CreatePatientInput {

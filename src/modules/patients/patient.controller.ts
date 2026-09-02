@@ -1,10 +1,15 @@
-import type { Request, Response } from "express";
+import { type Request, type Response } from "express";
 import * as patientService from "./patient.service";
 import { logger } from "../../common/logger";
 
-export async function getPatients(_req: Request, res: Response) {
+export async function getPatients(req: Request, res: Response) {
   try {
-    const patients = await patientService.listPatients();
+    const rawrId = req.user?.userId
+   if (!rawrId) {
+  return res.status(401).json({ error: "No autenticado" });
+}
+    const ownerId = Number(rawrId)
+    const patients = await patientService.listPatients(ownerId);
     res.status(200).json(patients);
   } catch (error) {
     logger.error({ err: error }, "Error al obtener los pacientes");
@@ -14,14 +19,27 @@ export async function getPatients(_req: Request, res: Response) {
 
 export async function getPatientById(req: Request, res: Response) {
   try {
+    const rawrId = req.user?.userId;
+    if (!rawrId) {
+      return res.status(401).json({ error: "No autenticado" });
+    }
+    const ownerId = Number(rawrId);
+
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
       return res.status(400).json({ error: "El id debe ser un número" });
     }
+
     const patient = await patientService.getPatientById(id);
     if (!patient) {
       return res.status(404).json({ error: "Paciente no encontrado" });
     }
+
+    // ERROR 403: Si el dueño del paciente no eres tú, bloqueamos
+    if (patient.owner_id !== ownerId) {
+      return res.status(403).json({ error: "No tienes permiso para ver este paciente" });
+    }
+
     res.status(200).json(patient);
   } catch (error) {
     logger.error({ err: error }, "Error al obtener el paciente");
