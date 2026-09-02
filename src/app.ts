@@ -1,4 +1,3 @@
-
 import express from "express";
 import patientRoutes from "./modules/patients/patient.routes";
 import appointmentRoutes from "./modules/appointments/appointment.routes";
@@ -13,7 +12,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 const app = express();
-
 
 // middlewares globales
 app.use(corsMiddleware);
@@ -35,4 +33,4 @@ app.use("/emails", emailRoutes);
 // manejador de errores
 app.use(errorHandle);
 
-export default app
+export default app;
