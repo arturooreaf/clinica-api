@@ -22,9 +22,12 @@ export async function getPatientById(id: number): Promise<Patient | undefined> {
   return patient;
 }
 
-export async function createPatient( data: CreatePatientInput, ownerId: number): Promise<Patient> {
+export async function createPatient(
+  data: CreatePatientInput,
+  ownerId: number,
+): Promise<Patient> {
   const patient = await patientData.create(data, ownerId);
-  logger.info({ patientId: patient.id }, "Paciente creado");
+  logger.info({ patientId: patient.id, ownerId }, "Paciente creado");
   return patient;
 }
 
