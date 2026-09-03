@@ -169,6 +169,8 @@ paths:
           $ref: "#/components/responses/InvalidId"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -197,6 +199,8 @@ paths:
           $ref: "#/components/responses/InvalidId"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -212,6 +216,8 @@ paths:
           $ref: "#/components/responses/InvalidId"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
@@ -409,6 +415,12 @@ components:
             $ref: "#/components/schemas/Error"
           example:
             error: Token no proporcionado
+    Forbidden:
+      description: No tienes permiso sobre este recurso
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
 
     NotFound:
       description: El recurso no existe

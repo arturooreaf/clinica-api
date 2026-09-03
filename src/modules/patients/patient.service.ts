@@ -6,9 +6,9 @@ import {
   UpdatePatientInput,
 } from "./types/patient.types";
 
-export async function listPatients(ownerId: number): Promise<Patient[]> {
-  const patients = await patientData.getAll(ownerId);
-  logger.debug({ count: patients.length }, "Pacientes listados");
+export async function listPatients(owner_Id: number): Promise<Patient[]> {
+  const patients = await patientData.getAll(owner_Id);
+  logger.info({ ownerId: owner_Id }, "Lista de pacientes");
   return patients;
 }
 
