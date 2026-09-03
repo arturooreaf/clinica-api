@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-"scripts": {
+  "scripts": {
     "test": "jest",
     "dev": "tsx watch src/server.ts",
     "lint": "eslint src",
@@ -15,7 +15,7 @@
     "build": "tsc && cp -r docs dist/",
     "start": "node dist/server.js"
   },
- "keywords": [],
+  "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",

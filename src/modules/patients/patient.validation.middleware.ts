@@ -15,7 +15,6 @@ function validateCreatePatient(
     return res.status(400).json({ error: "Datos inválidos" });
   }
 
-  // Si llegamos aquí, los datos son válidos: dejamos pasar al controller
   next();
 }
 
