@@ -116,32 +116,85 @@ concretos y el mensaje de error que dio cada uno.
 
 Luego `npm test`, las cuatro puertas y commit.
 
-### 2. Desplegar en Render (módulo 12)
+### 2. Desplegar en Render (módulo 12) — EN CURSO
 
-Nunca lo he hecho. Ya está hecho:
+**Estado a 07/09/2026: a un paso de terminar.**
 
-- `server.ts` usa `process.env.PORT ? Number(process.env.PORT) : 3000`.
-- `package.json` tiene `build` y `"start": "node dist/server.js"`.
-- `tsconfig.json` tiene `rootDir: "./src"` y `outDir: "./dist"`.
+Hecho:
 
-Me falta y no sé hacer:
+- Cuenta y workspace en Render (`Clinica-API`), registrado con GitHub.
+- Base de datos **`crud-defend-db`** creada. PostgreSQL 18, Frankfurt, plan Free.
+  **Caduca el 7 de octubre de 2026** (+14 días de margen antes del borrado).
+- **Migraciones aplicadas contra producción** desde mi Mac, con la URL externa:
+  `DATABASE_URL='...?sslmode=require' npm run migrate up`. Las cuatro tablas
+  creadas. El `?sslmode=require` hace falta desde fuera; desde dentro de Render
+  no, porque va por la red privada.
+- Servicio web **`CRUD-defend`** creado, conectado al repo, rama `main`,
+  Frankfurt (misma región que la base: si no, no se ven), plan Free.
+- Las **cinco** variables de entorno metidas en el panel. Son cinco, no nueve:
+  `DATABASE_URL` (la **interna**), `JWT_SECRET` (generado nuevo, distinto del
+  local), `CORS_ORIGIN`, `RESEND_API_KEY`, `RESEND_FROM`. Las tres `POSTGRES_*`
+  son solo para el `docker-compose` local, y `PORT` la pone Render sola.
+- Permisos de GitHub restringidos: Render solo ve `CRUD-defend`, no los repos de
+  la empresa (mínimo privilegio).
+- **Build correcto.** `npm install --include=dev && npm run build`. El
+  `--include=dev` es necesario porque TypeScript es una devDependency.
 
-- Crear el servicio en Render y conectarlo al repositorio de GitHub.
-- La base de datos PostgreSQL de producción: en local uso Docker, y no sé cómo
-  va en Render ni de dónde sale la `DATABASE_URL`.
-- Meter las nueve variables de entorno en el panel:
-  `PORT`, `DATABASE_URL`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
-  `JWT_SECRET`, `CORS_ORIGIN`, `RESEND_API_KEY`, `RESEND_FROM`.
-- Ejecutar las migraciones contra la base de datos de producción.
-- Que `docs/openapi.yaml` llegue al servidor: `app.ts` lo lee con `readFileSync`
-  al arrancar y si no está, el servidor no levanta.
-- **Sacar los tests del build de producción** con un `tsconfig.build.json`
-  aparte. Ojo: no vale poner `exclude` en el `tsconfig.json` normal — al
-  escribir mi propia clave `exclude` sustituyo la lista por defecto, `dist` deja
-  de estar excluido y salen 61 errores. Ya lo intenté.
-- Resend en producción (dominio verificado y `RESEND_FROM`).
-- Ajustar `CORS_ORIGIN` al dominio real.
-- Entender qué es el free tier y qué pasa cuando el servicio se duerme.
+**Lo único que falta:** el **Start Command** sigue siendo el de Render por
+defecto (`node index.js`). Hay que ponerlo en `npm start`, **pulsar Save changes
+y esperar la confirmación**, y luego _Manual Deploy → Deploy latest commit_.
+
+URL del servicio: https://crud-defend.onrender.com
+
+Después del primer arranque correcto, comprobar:
+
+- `GET /` responde 200.
+- `/docs` carga el Swagger (`app.ts` lee `openapi.yaml` al arrancar; si no lo
+  encuentra, el servidor no levanta).
+- Registro y login contra producción. Ojo: el `JWT_SECRET` es distinto, así que
+  los tokens locales no valen allí.
+
+Pendiente aparte:
+
+- **Sacar los tests del build de producción** con un `tsconfig.build.json`.
+  No vale poner `exclude` en el `tsconfig.json` normal: al escribir mi propia
+  clave `exclude` sustituyo la lista por defecto, `dist` deja de estar excluido
+  y salen 61 errores. Ya lo intenté.
+- Resend en producción: dominio verificado y `RESEND_FROM` real.
+- Ajustar `CORS_ORIGIN` cuando haya frontend. Ojo: mi middleware hace
+  `CORS_ORIGIN.split(",")`, espera una lista de direcciones, y `*` ahí no
+  funciona como comodín.
+- El servicio gratuito **se duerme a los 15 minutos** sin tráfico y tarda cerca
+  de un minuto en despertar. La primera petición tras un rato parece un fallo
+  y no lo es.
+
+### Cómo leer un log de despliegue
+
+Es cronológico y narra lo que hace. La línea que empieza por
+`==> Running build command '...'` o `==> Running '...'` dice **literalmente qué
+comando ejecutó**. Los dos fallos de hoy se resolvían leyendo solo esa línea:
+
+1. `Running build command 'npm start'` → tenía el comando de arranque en la
+   casilla del build. `dist/` no existía porque nadie la había fabricado (está
+   en `.gitignore`, así que tampoco viaja a GitHub).
+2. `Running 'node index.js'` → no había guardado el Start Command.
+
+Y cuando el error **cambia de sitio**, es que lo anterior ya está arreglado.
+
+### Metedura de pata que no debo repetir
+
+Pegué en el chat la `DATABASE_URL` completa **dos veces**. Una cadena de
+conexión lleva la contraseña dentro:
+
+```
+postgresql://USUARIO:CONTRASEÑA@SERVIDOR/BASE
+```
+
+No es una dirección, es una credencial entera. Tuve que rotar las credenciales
+en Render (_Credential Rotation → New default credential_, y borrar la vieja).
+
+**Regla: nunca pegar una línea que contenga `://`.** Al copiar del terminal,
+empezar a seleccionar **debajo** de la línea del comando.
 
 ### 3. Base de datos de test + happy paths (el bloque grande)
 
