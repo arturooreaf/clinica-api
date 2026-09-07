@@ -4,11 +4,11 @@ import { logger } from "../../common/logger";
 
 export async function getPatients(req: Request, res: Response) {
   try {
-    const rawId = req.user?.userId;
-    if (!rawId) {
+    const ownerId = req.user?.userId;
+    if (!ownerId) {
       return res.status(401).json({ error: "No autenticado" });
     }
-    const patients = await patientService.listPatients(rawId);
+    const patients = await patientService.listPatients(ownerId);
     res.status(200).json(patients);
   } catch (error) {
     logger.error({ err: error }, "Error con el servidor");
@@ -18,11 +18,10 @@ export async function getPatients(req: Request, res: Response) {
 
 export async function getPatientById(req: Request, res: Response) {
   try {
-    const rawId = req.user?.userId;
-    if (!rawId) {
+    const ownerId = req.user?.userId;
+    if (!ownerId) {
       return res.status(401).json({ error: "No autenticado" });
     }
-    const ownerId = Number(rawId);
 
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
@@ -72,11 +71,11 @@ export async function createPatient(req: Request, res: Response) {
 
 export async function updatePatient(req: Request, res: Response) {
   try {
-    const rawId = req.user?.userId;
-    if (!rawId) {
+    const ownerId = req.user?.userId;
+    if (!ownerId) {
       return res.status(401).json({ error: "No autenticado " });
     }
-    const ownerId = Number(rawId);
+
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
       return res.status(400).json({ error: "El id debe ser un número" });
@@ -108,11 +107,11 @@ export async function updatePatient(req: Request, res: Response) {
 
 export async function deletePatient(req: Request, res: Response) {
   try {
-    const rawId = req.user?.userId;
-    if (!rawId) {
+    const ownerId = req.user?.userId;
+    if (!ownerId) {
       return res.status(401).json({ error: "No autenticado" });
     }
-    const ownerId = Number(rawId);
+
     const id = Number(req.params.id);
 
     if (Number.isNaN(id)) {
