@@ -26,6 +26,15 @@ describe("GET /patients/:id", () => {
     expect(response.status).toBe(400);
   });
 });
+describe("PATCH /patients/:id", () => {
+  it("responde un 400", async () => {
+    const response = await request(app)
+      .patch("/patients/1")
+      .set("Authorization", `Bearer ${tokenValido}`)
+      .send({ name: 123 });
+    expect(response.status).toBe(400);
+  });
+});
 describe("POST /patients", () => {
   it("devuelve un 400 si el age no es un numero", async () => {
     const response = await request(app)
@@ -36,7 +45,7 @@ describe("POST /patients", () => {
   });
 });
 describe("GET /appointments", () => {
-  it("responde un 401", async () => {
+  it("devuelve un 401 -> sin token", async () => {
     const response = await request(app).get("/appointments");
     expect(response.status).toBe(401);
   });
@@ -58,3 +67,5 @@ describe("POST /emails", () => {
     expect(response.status).toBe(400);
   });
 });
+
+//happypath edgecases integrationtest > (siguiente capa de unit test) e2e
