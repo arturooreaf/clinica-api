@@ -196,7 +196,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/Patient"
         "400":
-          $ref: "#/components/responses/InvalidId"
+          description: |
+            Petición inválida. Tres causas posibles: el id no es un número,
+            el body no trae ningún campo, o un campo enviado tiene un tipo
+            incorrecto.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                idNoNumerico:
+                  summary: El id no es un número
+                  value:
+                    error: El id debe ser un número
+                bodyVacio:
+                  summary: No se ha enviado ningún campo
+                  value:
+                    error: El campo está vacío
+                tipoIncorrecto:
+                  summary: Un campo tiene el tipo equivocado
+                  value:
+                    error: Datos inválidos
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
