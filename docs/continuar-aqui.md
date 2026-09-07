@@ -14,22 +14,25 @@ comentado, y un ejercicio que **resuelvo yo**. **No me des el código hecho**:
 corrígeme y dame pistas. La solución completa solo como último recurso.
 Si te digo "corto", contéstame en tres líneas sin la clase entera.
 
+**Un paso por mensaje.** Si me das tres cosas a la vez, no hago ninguna.
+
 ---
 
 ## Estado del proyecto
 
 API REST con Express + TypeScript + PostgreSQL (Docker), JWT, bcrypt, Pino,
-rate limiting, CORS, Swagger en `/docs` y 7 tests con Jest + supertest.
+rate limiting, CORS, Swagger en `/docs` y **8 tests** con Jest + supertest.
 
 - Módulos 1 a 11 de mi ruta: **terminados**.
 - **Autorización terminada.** Las cinco rutas de `/patients` comprueban el dueño
   (`owner_id`): el listado filtra en el SQL, y `GET /:id`, `PATCH` y `DELETE`
   devuelven 401 → 400 → 404 → 403 en ese orden.
-- Rama `main`, árbol limpio. `tsc --noEmit`, `lint` y `format:check` pasan.
+- **Validación del PATCH terminada** (ver abajo).
+- Rama `main`, árbol limpio. `typecheck`, `lint`, `format:check` y `test` pasan.
 
 ---
 
-## Lo que me ha pedido mi jefe (reunión de hoy)
+## Lo que me ha pedido mi jefe
 
 Me ha dicho que estoy preparado para un proyecto real y me ha dado esta lista:
 
@@ -40,35 +43,65 @@ happy path > edge cases > integration test > (siguiente capa: unit test) > e2e
 - **e2e no es prioritario.**
 - **Render sí es prioritario**, y me ha avisado de que es complicado.
 
-**Dónde estoy respecto a eso:** mis 7 tests ya son integration tests, pero
-**6 de 7 son edge cases** (401 y 400). El único "happy path" es `GET /` que solo
-saluda. **No tengo ni un happy path real**: nada comprueba que crear un paciente
-funcione, que listarlos devuelva la lista, o que borrar borre.
+**Dónde estoy respecto a eso:** mis 8 tests son integration tests, pero
+**7 de 8 siguen siendo edge cases** (401 y 400). El único "happy path" es `GET /`
+que solo saluda. **Sigo sin un happy path real**: nada comprueba que crear un
+paciente funcione, que listarlos devuelva la lista, o que borrar borre.
 
 El motivo es que **no hay base de datos de test**, y todos los caminos felices
 tocan la base de datos. Montarla es lo que desbloquea los happy paths.
 
 ---
 
+## Hecho el 07/09/2026
+
+### Validación del PATCH — cerrado
+
+`validateUpdatePatient` en `patient.validation.middleware.ts`, montado en el
+PATCH de `patient.routes.ts`. Dos reglas:
+
+- Cada campo es **opcional**, pero si viene tiene que ser del tipo correcto.
+  El interruptor es `campo !== undefined &&` delante del `typeof`.
+- Si **no viene ninguno** de los tres, también es 400.
+
+Test nuevo en `app.test.ts`: `PATCH /patients/1` con `{ name: 123 }` → 400.
+No necesita base de datos, porque el middleware corta antes del controlador.
+
+`docs/openapi.yaml` documenta ahora las **tres causas** del 400 del PATCH
+(id, body vacío, tipo incorrecto) con un ejemplo cada una.
+
+### Dos bugs cazados que no estaban en el plan
+
+**Un 400 donde tocaba un 404.** En `updatePatient` había un `400` para
+"paciente no encontrado", cuando el GET y el DELETE devuelven `404` para el
+mismo caso. Estaba puesto porque "así los tests pasaban" — pero **ningún test
+tocaba el PATCH**, así que ese cambio no afectaba a `npm test` en absoluto. Lo
+único que hacía era mentirle al cliente. Revertido a 404.
+
+> Lección: un test verde por la razón equivocada es peor que uno rojo. Y antes
+> de aceptar que "esto arregla los tests", comprobarlo: era un `grep`.
+
+**Los tests se ejecutaban dos veces.** `npm test` decía 16 en vez de 8. `tsc`
+compilaba también `app.test.ts` a `dist/app.test.js`, y Jest ejecutaba los dos
+archivos. La copia de `dist` era **vieja**, así que la mitad de mis tests estaba
+probando una versión congelada de la app. Resuelto con `testPathIgnorePatterns`
+en `jest.config.js`.
+
+### Mi punto débil, identificado
+
+No es backend: es **JavaScript base**. `undefined` vs `null`, `===` vs `==`,
+`||` vs `&&`, que `typeof` devuelve un texto, que los parámetros van por
+posición. Lo he recogido todo en **`docs/chuleta-js.md`**, con los errores
+concretos y el mensaje de error que dio cada uno.
+
+**Costumbre a coger:** comprobarlo en vez de preguntarlo.
+`node -e 'console.log(typeof undefined)'` tarda tres segundos.
+
+---
+
 ## Plan de trabajo, en orden
 
-### 1. Validar el PATCH (lo primero, ~20 min)
-
-En `src/modules/patients/patient.validation.middleware.ts` tengo
-`validateCreatePatient` funcionando y montado en el POST. **El PATCH no tiene
-ningún middleware de validación** en `patient.routes.ts` (línea 10). Resultado:
-un `PATCH` con `{"age": "treinta"}` llega al SQL, Postgres rechaza el texto en
-una columna `integer` y respondo **500 en vez de 400**.
-
-Empecé un `validateUpdatePatient` vacío y lo borré, porque un middleware sin
-`next()` deja la petición colgada para siempre.
-
-Las reglas del PATCH son **distintas** a las del POST: en el POST `name` y `age`
-son obligatorios; en el PATCH todos los campos son opcionales, pero si vienen
-tienen que ser del tipo correcto, y si **no viene ninguno** también es 400.
-Quiero escribirla yo con pistas.
-
-### 2. Cuatro detalles pendientes
+### 1. Cuatro detalles pendientes (~15 min)
 
 - `Number(rawId)` es redundante en cuatro sitios del controlador: `userId` ya es
   `number` según `UserPayload` en `express.d.ts`.
@@ -80,11 +113,10 @@ Quiero escribirla yo con pistas.
 - `"build": "tsc && cp -r docs dist/"` — ese `cp` es inútil: `app.ts` lee
   `path.join(__dirname, "../docs/openapi.yaml")`, que compilado apunta a la raíz
   del proyecto, no a `dist/docs`.
-- Añadir `.DS_Store` al `.gitignore`.
 
-Luego `npm test`, las tres puertas de calidad y commit.
+Luego `npm test`, las cuatro puertas y commit.
 
-### 3. Desplegar en Render (módulo 12)
+### 2. Desplegar en Render (módulo 12)
 
 Nunca lo he hecho. Ya está hecho:
 
@@ -103,11 +135,15 @@ Me falta y no sé hacer:
 - Ejecutar las migraciones contra la base de datos de producción.
 - Que `docs/openapi.yaml` llegue al servidor: `app.ts` lo lee con `readFileSync`
   al arrancar y si no está, el servidor no levanta.
+- **Sacar los tests del build de producción** con un `tsconfig.build.json`
+  aparte. Ojo: no vale poner `exclude` en el `tsconfig.json` normal — al
+  escribir mi propia clave `exclude` sustituyo la lista por defecto, `dist` deja
+  de estar excluido y salen 61 errores. Ya lo intenté.
 - Resend en producción (dominio verificado y `RESEND_FROM`).
 - Ajustar `CORS_ORIGIN` al dominio real.
 - Entender qué es el free tier y qué pasa cuando el servicio se duerme.
 
-### 4. Base de datos de test + happy paths (el bloque grande)
+### 3. Base de datos de test + happy paths (el bloque grande)
 
 Es lo que me ha pedido el jefe y lo que más me va a subir el nivel. Necesito
 entender cómo se monta, cómo se limpia entre tests y cómo no tocar la base de
@@ -117,11 +153,13 @@ Happy paths que faltan: `POST /patients` → 201, `GET /patients` → 200 con la
 lista, `GET /patients/:id` → 200, `PATCH` → 200, `DELETE` → 204, y el 403 de
 verdad (con dos usuarios distintos).
 
-### 5. Unit tests
+### 4. Unit tests
 
 De las validaciones y los servicios, aislados, sin HTTP ni base de datos.
+`validateUpdatePatient` es un buen primer candidato: es una función pura sobre
+`req.body`.
 
-### 6. Mock de Resend
+### 5. Mock de Resend
 
 Para poder probar el 202 sin mandar correos de verdad ni gastar cuota.
 
@@ -139,7 +177,10 @@ comando y lo ejecuto yo.
 
 - `/auth/login` devuelve 500 en vez de 400 con el body vacío.
 - `errorHandle` está montado pero nunca se alcanza.
+- El test del PATCH se llama `"responde un 400"` y no dice **por qué**.
+  Renombrarlo a algo como `"devuelve un 400 si name no es un string"`.
 - No hay tests del 403 (necesita base de datos de test). Anotar con `it.todo`.
+- Los tests siguen entrando en el build de producción (ver punto 2).
 
 ## Después
 
