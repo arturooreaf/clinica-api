@@ -113,9 +113,9 @@ ya no es guardar, es desplegar**. Por eso ahora sí trabajo en ramas
 
 Ver punto 1. Tres commits separados, uno por tema.
 
-### Observabilidad — la pregunta de Eloy (ABIERTO)
+### Observabilidad — la pregunta de mi jefe (ABIERTO)
 
-Eloy me preguntó **por qué la base de datos no sale en los logs** y dónde ver
+Mi jefe me preguntó **por qué la base de datos no sale en los logs** y dónde ver
 los `debug`. Lo investigué:
 
 Tengo 41 llamadas al logger repartidas así:
@@ -136,14 +136,34 @@ Sobre los `debug`: tengo cinco, en los servicios. Mi `logger.ts` línea 7 pone
 un filtro: con `info` veo info, warn, error y fatal, y `debug` y `trace` quedan
 por debajo. Así que en local se ven y en producción no, y eso es deliberado.
 
-**Pendiente de comprobar:** `isDevelopment` sale de
-`process.env.NODE_ENV !== "production"`, y `NODE_ENV` no está entre mis cinco
-variables de Render — no la puse yo. Hay que mirar los logs del servicio: si
-salen coloreadas y con hora bonita, `pino-pretty` está activo y estoy corriendo
-en modo desarrollo **en producción**; si salen como JSON de una línea, va bien.
+**COMPROBADO Y CORREGIDO (08/09/2026):** la sospecha era cierta. `NODE_ENV` no
+estaba entre mis cinco variables de Render, así que `NODE_ENV !== "production"`
+daba **verdadero** y mi API creía estar en desarrollo. Consecuencias en
+producción: nivel `debug` en vez de `info`, y **`pino-pretty` activo**, que es
+lento (levanta un worker) y rompe la agregación de logs (Render y cualquier
+recolector esperan una línea JSON por evento para poder filtrar por campo; con
+texto coloreado, `traceId` deja de ser un campo consultable).
+
+Arreglado añadiendo `NODE_ENV=production` en el panel de Render. Sin tocar
+código: el `logger.ts` ya estaba bien escrito, solo faltaba decirle al servidor
+dónde estaba.
 
 **Tarea que sale de aquí:** instrumentar la capa de repositorio para que el SQL
 y su duración aparezcan en el log.
+
+**Y la decisión que hay que tomar antes de escribir esa instrumentación:** qué
+se registra exactamente.
+
+```
+la consulta      "SELECT * FROM patients WHERE owner_id = $1"   → útil, sin riesgo
+la duración      12 ms                                          → útil, sin riesgo
+los parámetros   ["Ana Ruiz", 34, "hipertensión"]                → DATOS DE PACIENTE
+```
+
+En una API sanitaria, registrar los parámetros mete datos clínicos en unos logs
+que se copian, se agregan y los ve gente de operaciones. Es justo lo que el
+módulo 10 llama "no registrar nunca datos sensibles". **Registrar consulta y
+duración, nunca valores.**
 
 ---
 
@@ -275,7 +295,7 @@ empezar a seleccionar **debajo** de la línea del comando.
 
 ### 3. Base de datos de test + happy paths (EL SIGUIENTE, el bloque grande)
 
-Es lo que me pidió Eloy y lo que más nivel me va a dar.
+Es lo que me pidió mi jefe y lo que más nivel me va a dar.
 
 **El problema.** Mis 8 tests esquivan la base de datos: todos comprueban 401 y
 400, y esos se resuelven antes de llegar al SQL (por eso pasan sin Docker
@@ -339,6 +359,19 @@ comando y lo ejecuto yo.
   Renombrarlo a algo como `"devuelve un 400 si name no es un string"`.
 - No hay tests del 403 (necesita base de datos de test). Anotar con `it.todo`.
 - Los tests siguen entrando en el build de producción (ver punto 2).
+- **`X-Powered-By` sigue activo.** No tengo `app.disable("x-powered-by")` en
+  `app.ts`, así que mi API va anunciando que corre Express y con qué framework
+  buscar vulnerabilidades. Es una línea, justo después del `const app =
+  express()`.
+- **Queda un resto de `owner_Id`** en `patient.service.ts` líneas 9-11
+  (`listPatients`). El renombrado se quedó a medias en la capa de servicio.
+- `GET /` devuelve `"Bienvenido a Careexpand"`, y el contenedor Docker se llama
+  `patients-careexpand-db`. **Si el repo va a ser público, esas referencias hay
+  que cambiarlas** y preguntar antes.
+- `/docs` es **público** en producción: cualquiera ve toda la superficie de la
+  API. Para un TFG es lo que quiero; para una API sanitaria real iría detrás de
+  autenticación o no se desplegaría. Es una decisión, no un descuido, pero hay
+  que saber justificarla.
 
 ## Después
 
