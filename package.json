@@ -12,7 +12,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "migrate": "node-pg-migrate -j ts -m src/database/migrations",
-    "build": "tsc && cp -r docs dist/",
+    "build": "tsc",
     "start": "node dist/server.js"
   },
   "keywords": [],
