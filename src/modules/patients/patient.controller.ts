@@ -73,7 +73,7 @@ export async function updatePatient(req: Request, res: Response) {
   try {
     const ownerId = req.user?.userId;
     if (!ownerId) {
-      return res.status(401).json({ error: "No autenticado " });
+      return res.status(401).json({ error: "No autenticado" });
     }
 
     const id = Number(req.params.id);
@@ -101,7 +101,7 @@ export async function updatePatient(req: Request, res: Response) {
     res.status(200).json(patient);
   } catch (error) {
     logger.error({ err: error }, "Error al actualizar el paciente");
-    res.status(500).json({ error: "Error al actualizar el paciente " });
+    res.status(500).json({ error: "Error al actualizar el paciente" });
   }
 }
 
@@ -115,21 +115,21 @@ export async function deletePatient(req: Request, res: Response) {
     const id = Number(req.params.id);
 
     if (Number.isNaN(id)) {
-      return res.status(400).json({ error: "el id debe ser un numero" });
+      return res.status(400).json({ error: "El id debe ser un número" });
     }
     const userExistingPatient = await patientService.getPatientById(id);
     if (!userExistingPatient) {
-      return res.status(404).json({ error: "paciente no encontrado" });
+      return res.status(404).json({ error: "Paciente no encontrado" });
     }
     if (userExistingPatient.owner_id !== ownerId) {
       return res
         .status(403)
-        .json({ error: "No tienes permiso para modificar el paciente" });
+        .json({ error: "No tienes permiso para borrar el paciente" });
     }
     await patientService.deletePatient(id);
     res.status(204).send();
   } catch (error) {
     logger.error({ err: error }, "Error al borrar paciente");
-    res.status(500).json({ error: "error al borrar paciente" });
+    res.status(500).json({ error: "Error al borrar el paciente" });
   }
 }
