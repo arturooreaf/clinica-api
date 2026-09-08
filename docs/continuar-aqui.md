@@ -116,57 +116,80 @@ concretos y el mensaje de error que dio cada uno.
 
 Luego `npm test`, las cuatro puertas y commit.
 
-### 2. Desplegar en Render (módulo 12) — EN CURSO
+### 2. Desplegar en Render (módulo 12) — TERMINADO (08/09/2026)
 
-**Estado a 07/09/2026: a un paso de terminar.**
+**La API está en producción y verificada:** https://crud-defend.onrender.com
 
-Hecho:
+Montaje:
 
-- Cuenta y workspace en Render (`Clinica-API`), registrado con GitHub.
-- Base de datos **`crud-defend-db`** creada. PostgreSQL 18, Frankfurt, plan Free.
-  **Caduca el 7 de octubre de 2026** (+14 días de margen antes del borrado).
-- **Migraciones aplicadas contra producción** desde mi Mac, con la URL externa:
-  `DATABASE_URL='...?sslmode=require' npm run migrate up`. Las cuatro tablas
-  creadas. El `?sslmode=require` hace falta desde fuera; desde dentro de Render
-  no, porque va por la red privada.
-- Servicio web **`CRUD-defend`** creado, conectado al repo, rama `main`,
-  Frankfurt (misma región que la base: si no, no se ven), plan Free.
-- Las **cinco** variables de entorno metidas en el panel. Son cinco, no nueve:
-  `DATABASE_URL` (la **interna**), `JWT_SECRET` (generado nuevo, distinto del
-  local), `CORS_ORIGIN`, `RESEND_API_KEY`, `RESEND_FROM`. Las tres `POSTGRES_*`
-  son solo para el `docker-compose` local, y `PORT` la pone Render sola.
-- Permisos de GitHub restringidos: Render solo ve `CRUD-defend`, no los repos de
-  la empresa (mínimo privilegio).
-- **Build correcto.** `npm install --include=dev && npm run build`. El
+- Workspace `Clinica-API`. Base de datos **`crud-defend-db`** (PostgreSQL 18,
+  Frankfurt, Free). **Caduca el 7 de octubre de 2026** (+14 días de margen).
+- Migraciones aplicadas contra producción desde el Mac con la URL **externa** y
+  `?sslmode=require`. Desde dentro de Render no hace falta: va por red privada.
+- Servicio web `CRUD-defend`, rama `main`, **misma región que la base** (si no,
+  no se ven), plan Free.
+- `Build Command`: `npm install --include=dev && npm run build`. El
   `--include=dev` es necesario porque TypeScript es una devDependency.
+- `Start Command`: `npm start`.
+- **Cinco** variables de entorno (no nueve): `CORS_ORIGIN`, `DATABASE_URL` (la
+  **interna**), `JWT_SECRET` (generado, distinto del local), `RESEND_API_KEY`,
+  `RESEND_FROM`. Las tres `POSTGRES_*` son solo del `docker-compose` local y
+  `PORT` la pone Render.
+- Permisos de GitHub restringidos: Render solo ve `CRUD-defend`, no los repos de
+  la empresa.
 
-**Lo único que falta:** el **Start Command** sigue siendo el de Render por
-defecto (`node index.js`). Hay que ponerlo en `npm start`, **pulsar Save changes
-y esperar la confirmación**, y luego _Manual Deploy → Deploy latest commit_.
+Comprobado, en este orden:
 
-URL del servicio: https://crud-defend.onrender.com
+1. `GET /` → _Bienvenido a Careexpand_.
+2. `/docs` → carga el Swagger. Esto prueba que `openapi.yaml` llegó al servidor:
+   `app.ts` lo lee con `readFileSync` al arrancar, y sin él no levanta.
+3. `POST /auth/register` → 201 con el usuario. Prueba la cadena entera hasta la
+   tabla `users`.
+4. `POST /auth/login` → devuelve token. Prueba bcrypt y el `JWT_SECRET` nuevo.
 
-Después del primer arranque correcto, comprobar:
+**Ahora tengo dos entornos con el mismo código:** `localhost:3000` con Docker, y
+Render. Lo que cambia entre ellos son exactamente las cinco variables.
 
-- `GET /` responde 200.
-- `/docs` carga el Swagger (`app.ts` lee `openapi.yaml` al arrancar; si no lo
-  encuentra, el servidor no levanta).
-- Registro y login contra producción. Ojo: el `JWT_SECRET` es distinto, así que
-  los tokens locales no valen allí.
+#### Cuatro despliegues fallidos, y lo que enseñó cada uno
 
-Pendiente aparte:
+1. `Running build command 'npm start'` → tenía el comando de arranque en la
+   casilla del build. `dist/` no existía porque nadie la había fabricado.
+2. `Running 'node index.js'` → no había guardado el Start Command.
+3. y 4. `La variable de entorno CORS_ORIGIN no está definida` → **la variable
+   existía, pero con el valor vacío.** Mi `requireEnv` hace `if (!value)`, y
+   **la cadena vacía es falsy**, así que da el mismo error que si no existiera.
+   El mensaje miente en ese caso. Perdí tres intentos revisando **nombres**
+   cuando el fallo estaba en el **valor**.
 
-- **Sacar los tests del build de producción** con un `tsconfig.build.json`.
-  No vale poner `exclude` en el `tsconfig.json` normal: al escribir mi propia
-  clave `exclude` sustituyo la lista por defecto, `dist` deja de estar excluido
-  y salen 61 errores. Ya lo intenté.
-- Resend en producción: dominio verificado y `RESEND_FROM` real.
-- Ajustar `CORS_ORIGIN` cuando haya frontend. Ojo: mi middleware hace
-  `CORS_ORIGIN.split(",")`, espera una lista de direcciones, y `*` ahí no
-  funciona como comodín.
+> Truco del panel: en Render, el enlace **Generate** solo aparece en las casillas
+> **vacías**. Las que tienen valor muestran los iconos de copiar y de ojo. Se ve
+> de un vistazo cuáles faltan.
+
+> Y `Generate` solo sirve para `JWT_SECRET`. Las demás tienen un valor concreto
+> que no se puede inventar.
+
+También cacé una errata que **no** habría roto nada al arrancar:
+`CORS_ORIGIN` terminaba en `...onrender.comA`. Texto no vacío, así que
+`requireEnv` lo daba por bueno y el servidor levantaba. El fallo habría salido
+semanas después, con el navegador bloqueando peticiones por CORS.
+**Un error que se calla es peor que uno que revienta.**
+
+#### Pendiente de este bloque
+
+- **Sacar los tests del build de producción** con un `tsconfig.build.json`
+  aparte. No vale poner `exclude` en el `tsconfig.json` normal: al escribir mi
+  propia clave `exclude` sustituyo la lista por defecto, `dist` deja de estar
+  excluido y salen 61 errores. Ya lo intenté.
+- **Resend**: `RESEND_FROM` es `onboarding@resend.dev`, la dirección de pruebas.
+  Solo puedo mandarme correos a mí mismo. Para enviar de verdad hace falta
+  verificar un dominio con registros DNS.
+- **`CORS_ORIGIN`** apunta a la propia API porque todavía no hay frontend.
+  Cuando lo haya, cambiarlo. Ojo: el middleware hace `CORS_ORIGIN.split(",")`,
+  espera una lista de direcciones, y `*` ahí **no** funciona como comodín.
 - El servicio gratuito **se duerme a los 15 minutos** sin tráfico y tarda cerca
-  de un minuto en despertar. La primera petición tras un rato parece un fallo
-  y no lo es.
+  de un minuto en despertar. La primera petición tras un rato parece un fallo.
+- El usuario `demo@careexpand.com` de producción tiene una contraseña conocida.
+  Es de prueba y la base es desechable, pero **no meter ahí nada real**.
 
 ### Cómo leer un log de despliegue
 
