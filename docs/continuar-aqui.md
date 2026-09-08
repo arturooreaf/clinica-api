@@ -99,22 +99,76 @@ concretos y el mensaje de error que dio cada uno.
 
 ---
 
+## Hecho el 08/09/2026
+
+### Despliegue terminado y verificado
+
+`https://crud-defend.onrender.com` en pie. Detalle completo en el punto 2.
+El ciclo **commit → push a `main` → despliegue automático → producción** está
+funcionando: _Auto-Deploy_ está en _On Commit_, así que **`git push origin main`
+ya no es guardar, es desplegar**. Por eso ahora sí trabajo en ramas
+`feature/...` y solo integro en `main` cuando las cuatro puertas están verdes.
+
+### Los cuatro detalles del punto 1, cerrados
+
+Ver punto 1. Tres commits separados, uno por tema.
+
+### Observabilidad — la pregunta de Eloy (ABIERTO)
+
+Eloy me preguntó **por qué la base de datos no sale en los logs** y dónde ver
+los `debug`. Lo investigué:
+
+Tengo 41 llamadas al logger repartidas así:
+
+- `logger.middleware` → una línea por petición (método, url, status, ms).
+- **Servicios** → eventos de negocio ("Paciente creado", "Login correcto").
+- **Controladores** → los errores de los `catch`.
+- **Repositorios** → **cero. Ni una.**
+
+Y el repositorio es justo la capa que habla con la base. Mis `pool.query(...)`
+no registran nada y `pg` tampoco lo hace solo. Por eso el log dice _"llegó un
+PATCH y devolvió 400"_ pero nunca _"se ejecutó este SQL, con estos parámetros,
+en 12 ms"_. **Cuando algo va lento en producción casi siempre es la base, y
+ahora mismo no tengo forma de verlo.**
+
+Sobre los `debug`: tengo cinco, en los servicios. Mi `logger.ts` línea 7 pone
+`level: isDevelopment ? "debug" : "info"`. Un nivel de log es un **umbral**, no
+un filtro: con `info` veo info, warn, error y fatal, y `debug` y `trace` quedan
+por debajo. Así que en local se ven y en producción no, y eso es deliberado.
+
+**Pendiente de comprobar:** `isDevelopment` sale de
+`process.env.NODE_ENV !== "production"`, y `NODE_ENV` no está entre mis cinco
+variables de Render — no la puse yo. Hay que mirar los logs del servicio: si
+salen coloreadas y con hora bonita, `pino-pretty` está activo y estoy corriendo
+en modo desarrollo **en producción**; si salen como JSON de una línea, va bien.
+
+**Tarea que sale de aquí:** instrumentar la capa de repositorio para que el SQL
+y su duración aparezcan en el log.
+
+---
+
 ## Plan de trabajo, en orden
 
-### 1. Cuatro detalles pendientes (~15 min)
+### 1. Cuatro detalles pendientes — TERMINADO (08/09/2026)
 
-- `Number(rawId)` es redundante en cuatro sitios del controlador: `userId` ya es
-  `number` según `UserPayload` en `express.d.ts`.
-- `owner_Id` en `patient.repository.ts` línea 10 → `ownerId` (snake_case para
-  SQL, camelCase para TypeScript).
-- Mensajes de error inconsistentes: `"No autenticado "` con espacio de más,
-  `"el id debe ser un numero"` sin mayúscula ni tilde, y el 403 del `DELETE`
-  dice "modificar" cuando debería decir "borrar".
-- `"build": "tsc && cp -r docs dist/"` — ese `cp` es inútil: `app.ts` lee
-  `path.join(__dirname, "../docs/openapi.yaml")`, que compilado apunta a la raíz
-  del proyecto, no a `dist/docs`.
+- `Number(rawId)` redundante eliminado en las cinco funciones del controlador.
+  `req.user?.userId` ya es `number` según `UserPayload` en `express.d.ts`; lo
+  que **sí** hace falta convertir es `req.params.id`, porque una URL es texto.
+- `owner_Id` → `ownerId` en el repositorio. La convención es **snake_case para
+  SQL, camelCase para TypeScript**, y el repositorio es la frontera entre los
+  dos mundos: dentro del string va `owner_id` (nombre de columna) y fuera
+  `ownerId` (variable). `owner_Id` no era ninguna de las dos.
+- Seis mensajes de error unificados. Uno no era cosmético: el 403 del `DELETE`
+  decía "modificar".
+- `"build": "tsc && cp -r docs dist/"` → `"tsc"`. El `cp` era inútil y lo
+  **comprobé** antes de quitarlo: `app.ts` hace
+  `path.join(__dirname, "../docs/openapi.yaml")`, y tanto desde `src/` como
+  desde `dist/` eso resuelve a la carpeta `docs/` de la raíz. La copia de
+  `dist/docs/` no la leía nadie.
 
-Luego `npm test`, las cuatro puertas y commit.
+> **Queda un resto:** `src/modules/patients/patient.service.ts` líneas 9-11
+> todavía usan `owner_Id`. El renombrado se quedó a medias en la capa de
+> servicio. Cambiarlo.
 
 ### 2. Desplegar en Render (módulo 12) — TERMINADO (08/09/2026)
 
@@ -219,15 +273,43 @@ en Render (_Credential Rotation → New default credential_, y borrar la vieja).
 **Regla: nunca pegar una línea que contenga `://`.** Al copiar del terminal,
 empezar a seleccionar **debajo** de la línea del comando.
 
-### 3. Base de datos de test + happy paths (el bloque grande)
+### 3. Base de datos de test + happy paths (EL SIGUIENTE, el bloque grande)
 
-Es lo que me ha pedido el jefe y lo que más me va a subir el nivel. Necesito
-entender cómo se monta, cómo se limpia entre tests y cómo no tocar la base de
-datos de desarrollo.
+Es lo que me pidió Eloy y lo que más nivel me va a dar.
 
-Happy paths que faltan: `POST /patients` → 201, `GET /patients` → 200 con la
-lista, `GET /patients/:id` → 200, `PATCH` → 200, `DELETE` → 204, y el 403 de
-verdad (con dos usuarios distintos).
+**El problema.** Mis 8 tests esquivan la base de datos: todos comprueban 401 y
+400, y esos se resuelven antes de llegar al SQL (por eso pasan sin Docker
+levantado). Pero un `POST /patients` que devuelve 201 **tiene** que escribir una
+fila, y un `DELETE` que devuelve 204 tiene que borrarla.
+
+**Por qué hace falta una base aparte, y no la de desarrollo:**
+
+1. Cada `npm test` me borraría mis datos.
+2. Peor: un test como _"listar pacientes devuelve la lista"_ pasaría o fallaría
+   según lo que hubiera dentro ese día. **Un test no puede depender del estado
+   del mundo**; tiene que arrancar siempre desde el mismo punto conocido. Un
+   test que a veces pasa y a veces no deja de ser una prueba y pasa a ser un
+   rumor.
+
+**La palanca que ya sé usar:** toda mi app decide a qué base se conecta en un
+solo punto, `src/database/pool.ts`, a partir de `DATABASE_URL`. Ya usé eso para
+lanzar las migraciones contra Render desde mi portátil poniendo la variable
+delante del comando. Los tests son el mismo truco.
+
+**Lo que hay que decidir y no sé hacer todavía:**
+
+- Dónde vive esa base de test (¿otro servicio en el `docker-compose`? ¿otra
+  base dentro del mismo Postgres?).
+- Cómo apuntar Jest a ella sin tocar mi `.env` de desarrollo.
+- Cómo crear las tablas ahí (las migraciones, supongo).
+- **Cómo dejarla limpia entre tests**, que es la parte que no tengo clara:
+  ¿borrar todo antes de cada test? ¿al final? ¿transacciones?
+- Cómo crear los datos que un test necesita para empezar (un usuario y su
+  token) sin repetir el mismo bloque en cada prueba.
+
+**Happy paths que faltan:** `POST /patients` → 201, `GET /patients` → 200 con la
+lista, `GET /patients/:id` → 200, `PATCH` → 200, `DELETE` → 204, y el **403 de
+verdad**, con dos usuarios distintos, que hoy no puedo probar.
 
 ### 4. Unit tests
 
