@@ -7,10 +7,10 @@ import {
 
 //Leemos todos los resultados.
 
-export async function getAll(owner_Id: number): Promise<Patient[]> {
+export async function getAll(ownerId: number): Promise<Patient[]> {
   const result = await pool.query(
     "SELECT * FROM patients WHERE owner_id = $1 ORDER BY id ",
-    [owner_Id],
+    [ownerId],
   );
   return result.rows as Patient[];
 }
