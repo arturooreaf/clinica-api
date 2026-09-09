@@ -132,6 +132,50 @@ Dentro de `psql`:
 | `\d patients` | describir la tabla `patients` |
 | `\q`          | salir                         |
 
+### Ver todas las bases del contenedor
+
+```bash
+docker exec -it patients-careexpand-db sh -c 'psql -U "$POSTGRES_USER" -l'
+```
+
+Lista todas las bases del servidor Postgres, no solo la de desarrollo.
+
+### Bases que hay en el contenedor
+
+| Base                                  | Para que                                           |
+| -------------------------------------- | --------------------------------------------------- |
+| `BBDDcareexpand`                       | desarrollo (`npm run dev`)                          |
+| `clinica_test`                         | tests (bloque 3 del plan, ver `continuar-aqui.md`)  |
+| `postgres`, `template0`, `template1`   | internas de Postgres, no se tocan                   |
+
+### Crear una base nueva
+
+```bash
+docker exec -it patients-careexpand-db sh -c 'psql -U "$POSTGRES_USER" -c "CREATE DATABASE nombre_base;"'
+```
+
+### Por que las comillas simples y las dobles
+
+Hay dos shells metidas una en otra: la de tu Mac (la que lee `docker exec`) y
+la de dentro del contenedor (la que arranca `sh -c`).
+
+Las comillas simples `'...'` envuelven el comando entero como un sobre
+cerrado: evitan que **tu Mac** intente expandir `$POSTGRES_USER` antes de que
+el comando llegue al contenedor -- tu Mac no tiene esa variable, solo la tiene
+el contenedor. Dentro, `sh -c` si la expande, con el valor real.
+
+Las comillas dobles alrededor de la variable (`"$POSTGRES_USER"`) protegen el
+valor por si tuviera espacios, para que llegue como un solo argumento.
+
+### El .env.test
+
+Copia de `.env` para los tests, con `DATABASE_URL` apuntando a `clinica_test`
+en vez de a la base de desarrollo. Todo lo demas (usuario, contrasena, host,
+puerto) es igual.
+
+**No se sube a Git** -- esta en `.gitignore` junto a `.env`, porque lleva una
+cadena de conexion real. Mismo motivo que `.env`, mismo tratamiento.
+
 ---
 
 ## Documentación de la API

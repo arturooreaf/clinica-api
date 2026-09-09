@@ -32,7 +32,7 @@ rate limiting, CORS, Swagger en `/docs` y **8 tests** con Jest + supertest.
 
 ---
 
-## Lo que me ha pedido mi jefe
+## Lo que me han pedido aprender
 
 Me ha dicho que estoy preparado para un proyecto real y me ha dado esta lista:
 
@@ -164,6 +164,62 @@ En una API sanitaria, registrar los parámetros mete datos clínicos en unos log
 que se copian, se agregan y los ve gente de operaciones. Es justo lo que el
 módulo 10 llama "no registrar nunca datos sensibles". **Registrar consulta y
 duración, nunca valores.**
+
+---
+
+## Hecho el 09/09/2026
+
+### Revision de estado real (con IA de mentor)
+
+- `git branch/status/log`, `tsc --noEmit` y `npm run lint` en verde. `npm test`
+  no se pudo verificar en ese momento (entorno de revision sin Docker a
+  mano); pendiente confirmarlo en local.
+- **Hallazgo importante**: el commit `1bcdb33` ("test: add happy path
+  integration tests for patients", hecho el 08/09 pero no anotado aqui) ya
+  anadio un `beforeEach` global con
+  `TRUNCATE TABLE users, patients, appointments CASCADE` mas tres tests de
+  happy path (`POST /patients`, `GET /patients`, `GET /patients/:id`). Corria
+  contra `pool`, el mismo de siempre -- sin base de test separada, asi que
+  cada `npm test` habria vaciado la base de **desarrollo**.
+- Al ser `beforeEach` global (fuera de cualquier `describe`), afecta tambien a
+  los tests viejos de edge cases: ahora **todos** los tests, no solo los
+  nuevos, necesitan Docker levantado para pasar. Antes no.
+
+### Decisiones tomadas hoy
+
+- **Donde vive la base de test**: misma instancia de Postgres del
+  `docker-compose` (contenedor `patients-careexpand-db`), otra base logica:
+  `clinica_test`, separada de `BBDDcareexpand` (desarrollo). Se descarto un
+  contenedor de test aparte por ahora -- no hay CI compartida todavia, es
+  sobra de infraestructura para el tamano actual del proyecto.
+- **Como limpiarla entre tests**: se mantiene el patron que ya estaba escrito,
+  `TRUNCATE ... CASCADE` en `beforeEach` -- es el estandar razonable a esta
+  escala. Transaccion + rollback se descarto por ahora: exigiria que toda la
+  app comparta un mismo cliente `pg` inyectado, que no esta montado.
+- Base `clinica_test` ya creada en el contenedor.
+- `.env.test` creado (copia de `.env`) con `DATABASE_URL` apuntando a
+  `clinica_test` en vez de `BBDDcareexpand`. Anadido a `.gitignore` (antes
+  solo cubria `.env` a secas).
+- `docs/comandos.md` ampliado: como listar bases del contenedor, que es cada
+  una, como crear una base nueva, y por que las comillas simples/dobles en
+  los `docker exec ... sh -c '...'`.
+
+### Pendiente de hoy, sin resolver todavia
+
+- **Aun no comprobado**: si `clinica_test` ya tiene las tablas (migraciones
+  aplicadas) o hace falta correr `npm run migrate up` ahi con `DATABASE_URL`
+  apuntando a esa base.
+- **Aun no hecho**: que Jest cargue `.env.test` en vez de `.env` al ejecutar
+  `npm test` (falta la configuracion, no basta con que el archivo exista).
+- **Aun no corregido a mano**: en el test de `GET /patients`, hay dos
+  `INSERT` metidos en una sola llamada a `pool.query`, separados por `;` --
+  deberia ser SQL parametrizado, uno a uno, como el resto del proyecto.
+- El bloque de "crear usuario" se repite igual en los tres tests nuevos --
+  queda para el modulo de fixtures (punto 4 del plan), no es prioridad ahora
+  mismo.
+- Se encontro un archivo `.git/index.lock` residual (de una herramienta de
+  revision) -- si algun `git` da error de "Unable to create .git/index.lock:
+  File exists", borrarlo a mano: `rm .git/index.lock`.
 
 ---
 
@@ -316,16 +372,19 @@ solo punto, `src/database/pool.ts`, a partir de `DATABASE_URL`. Ya usé eso para
 lanzar las migraciones contra Render desde mi portátil poniendo la variable
 delante del comando. Los tests son el mismo truco.
 
-**Lo que hay que decidir y no sé hacer todavía:**
+**Donde estoy con estas decisiones (actualizado 09/09/2026):**
 
-- Dónde vive esa base de test (¿otro servicio en el `docker-compose`? ¿otra
-  base dentro del mismo Postgres?).
-- Cómo apuntar Jest a ella sin tocar mi `.env` de desarrollo.
-- Cómo crear las tablas ahí (las migraciones, supongo).
-- **Cómo dejarla limpia entre tests**, que es la parte que no tengo clara:
-  ¿borrar todo antes de cada test? ¿al final? ¿transacciones?
-- Cómo crear los datos que un test necesita para empezar (un usuario y su
-  token) sin repetir el mismo bloque en cada prueba.
+- listo Donde vive la base de test -> otra base logica en el mismo Postgres:
+  `clinica_test`.
+- pendiente Como apuntar Jest a ella sin tocar mi `.env` de desarrollo -> tengo
+  `.env.test` creado, pero Jest todavia no lo esta cargando. Siguiente paso.
+- pendiente Como crear las tablas ahi -> sin confirmar si `clinica_test` ya
+  tiene las migraciones aplicadas.
+- listo **Como dejarla limpia entre tests** -> me quedo con
+  `TRUNCATE ... CASCADE` en `beforeEach`, que ya tenia escrito; solo falta
+  que apunte a la base correcta.
+- pendiente Como crear los datos que un test necesita (un usuario y su token)
+  sin repetir el mismo bloque en cada prueba -> sigue sin resolver.
 
 **Happy paths que faltan:** `POST /patients` → 201, `GET /patients` → 200 con la
 lista, `GET /patients/:id` → 200, `PATCH` → 200, `DELETE` → 204, y el **403 de
@@ -362,7 +421,7 @@ comando y lo ejecuto yo.
 - **`X-Powered-By` sigue activo.** No tengo `app.disable("x-powered-by")` en
   `app.ts`, así que mi API va anunciando que corre Express y con qué framework
   buscar vulnerabilidades. Es una línea, justo después del `const app =
-  express()`.
+express()`.
 - **Queda un resto de `owner_Id`** en `patient.service.ts` líneas 9-11
   (`listPatients`). El renombrado se quedó a medias en la capa de servicio.
 - `GET /` devuelve `"Bienvenido a Careexpand"`, y el contenedor Docker se llama
