@@ -109,49 +109,45 @@ describe("POST /patients - Happy Path", () => {
   });
 });
 
-
-describe("GET /patients - Happy Path", () => {
-
+describe("GET /patients - HappyPath", () => {
   //Preparacion
-  it("Devuelve la lista de los pacientes  y devuelve un 200", async () =>{
+  it("Devuelve la lista de los pacientes  y devuelve un 200", async () => {
     await pool.query(
-     `INSERT INTO users(id, name, email, password_hash) VALUES(1, 'Medico2', 'medico2@gmail.com', 'hash_falso');
+      `INSERT INTO users(id, name, email, password_hash) VALUES(1, 'Medico2', 'medico2@gmail.com', 'hash_falso');
      INSERT INTO patients(id, name, age, diagnosis, owner_id) VALUES (1, 'Alfredo Fernandez', 34, 'gripe', 1 );`,
     );
-    //Accion 
-      const response = await request(app)
-      .get('/patients')
-      .set("Authorization", `Bearer ${tokenValido}`)
-    //Comprobacion 
-      
-      expect (response.status).toBe(200)
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBe(1);
-      expect(response.body[0].name).toBe("Alfredo Fernandez");
-    
+    //Accion
+    const response = await request(app)
+      .get("/patients")
+      .set("Authorization", `Bearer ${tokenValido}`);
+    //Comprobacion
 
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body)).toBe(true);
+    expect(response.body.length).toBe(1);
+    expect(response.body[0].name).toBe("Alfredo Fernandez");
   });
 });
 
-
-describe("GET /patients/:id", () => {
-it("devuelve un paciente por id y devuelve un 200", async() => {
-  await pool.query(
+describe("GET /patients/:id - HappyPath", () => {
+  it("devuelve un paciente por id y devuelve un 200", async () => {
+    await pool.query(
       `INSERT INTO users(id, name, email, password_hash) VALUES(1, 'Medico2', 'medico2@gmail.com', 'hash_falso'); 
        INSERT INTO patients(id, name, age, diagnosis, owner_id) VALUES (1, 'Quini', 33, 'gripe', 1 );`,
     );
-    //Accion 
-   const response  = await request(app)
-   .get('/patients/1')
-    .set("Authorization", `Bearer ${tokenValido}`)
+    //Accion
+    const response = await request(app)
+      .get("/patients/1")
+      .set("Authorization", `Bearer ${tokenValido}`);
 
-      expect(response.status).toBe(200);
+    expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("id");
     expect(response.body.name).toBe("Quini");
     expect(response.body.age).toBe(33);
     expect(response.body.diagnosis).toBe("gripe");
     expect(response.body.owner_id).toBe(1);
-    
+  });
 });
 
-});
+
+
