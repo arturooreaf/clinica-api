@@ -5,6 +5,8 @@ import { JWT_SECRET } from "./common/config/env";
 import { pool } from "./database/pool";
 
 const tokenValido = jwt.sign({ userId: 1 }, JWT_SECRET, { expiresIn: "1h" });
+const tokenValido2 = jwt.sign({ userId: 2 }, JWT_SECRET, { expiresIn: "1h" });
+const tokenValido3 = jwt.sign({ userId: 3 }, JWT_SECRET, { expiresIn: "1h" });
 
 beforeEach(async () => {
   // TRUNCATE vacía las tablas más rápido que DELETE.
@@ -113,13 +115,13 @@ describe("GET /patients - HappyPath", () => {
   //Preparacion
   it("Devuelve la lista de los pacientes  y devuelve un 200", async () => {
     await pool.query(
-      `INSERT INTO users(id, name, email, password_hash) VALUES(1, 'Medico2', 'medico2@gmail.com', 'hash_falso');
-     INSERT INTO patients(id, name, age, diagnosis, owner_id) VALUES (1, 'Alfredo Fernandez', 34, 'gripe', 1 );`,
+      `INSERT INTO users(id, name, email, password_hash) VALUES(2, 'Medico2', 'medico2@gmail.com', 'hash_falso');
+     INSERT INTO patients(id, name, age, diagnosis, owner_id) VALUES (1, 'Alfredo Fernandez', 34, 'gripe', 2 );`,
     );
     //Accion
     const response = await request(app)
       .get("/patients")
-      .set("Authorization", `Bearer ${tokenValido}`);
+      .set("Authorization", `Bearer ${tokenValido2}`);
     //Comprobacion
 
     expect(response.status).toBe(200);
@@ -139,7 +141,7 @@ describe("GET /patients/:id - HappyPath", () => {
     const response = await request(app)
       .get("/patients/1")
       .set("Authorization", `Bearer ${tokenValido}`);
-
+//comprobacion
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("id");
     expect(response.body.name).toBe("Quini");
@@ -150,4 +152,50 @@ describe("GET /patients/:id - HappyPath", () => {
 });
 
 
+
+//CREACION
+describe("PATCH /patients/:id - HappyPath", () => {
+//PREPARACION
+  it("Actualiza un paciente y devuelve un 200", async () =>{
+    await pool.query(
+       `INSERT INTO users(id, name, email, password_hash) VALUES(1, 'Medico2', 'medico2@gmail.com', 'hash_falso'); 
+       INSERT INTO patients(id, name, age, diagnosis, owner_id) VALUES (1, 'Quini', 33, 'gripe', 1);`,
+      );
+//ACCION
+const response = await request(app)
+      .patch("/patients/1")
+      .set("Authorization", `Bearer ${tokenValido}`)
+      .send ({diagnosis: "recuperado"})
+
+ //COMPROBACION
+expect(response.status).toBe(200)
+expect(response.body).toHaveProperty("id")
+expect(response.body.diagnosis).toBe("recuperado")
+
+  });
+});
+
+
+
+//CREACION
+describe("DELETE /patients/:id -HappyPath", () => {
+  //Preparacion
+  it("Elimina un paciente existente y devuelve 204", async () => {
+    await pool.query(
+      `INSERT INTO users(id, name, email, password_hash) VALUES (3, 'RaulMedico', 'medico2@gmail.com', 'hash_falso'); 
+       INSERT INTO patients(id, name, age, diagnosis, owner_id) VALUES (1, 'Quini', 33, 'gripe', 3);`,
+    );
+//ACCION
+const response = await request(app)
+.delete("/patients/1")
+.set("Authorization", `Bearer ${tokenValido3}`)
+//Comprobacion
+expect(response.status).toBe(204)
+
+  });
+});
+/**
+ * 3. El 403 de verdad
+Necesitas dos usuarios con tokens distintos (jwt.sign({userId: 1}, ...) y otro con userId: 2), y un paciente cuyo owner_id sea 1. El usuario 2 intenta GET /patients/:id (o PATCH/DELETE, el que prefieras) sobre el paciente del usuario 1
+ → 403. Esto es lo único que hoy no podías probar sin base de test, y ahora sí. /***/ 
 
