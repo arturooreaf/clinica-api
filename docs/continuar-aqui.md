@@ -91,7 +91,7 @@ en `jest.config.js`.
 
 No es backend: es **JavaScript base**. `undefined` vs `null`, `===` vs `==`,
 `||` vs `&&`, que `typeof` devuelve un texto, que los parámetros van por
-posición. Lo he recogido todo en **`docs/chuleta-js.md`**, con los errores
+posición. Lo he recogido todo en **`docs/chuletas/javascript.md`**, con los errores
 concretos y el mensaje de error que dio cada uno.
 
 **Costumbre a coger:** comprobarlo en vez de preguntarlo.
@@ -200,7 +200,7 @@ duración, nunca valores.**
 - `.env.test` creado (copia de `.env`) con `DATABASE_URL` apuntando a
   `clinica_test` en vez de `BBDDcareexpand`. Anadido a `.gitignore` (antes
   solo cubria `.env` a secas).
-- `docs/comandos.md` ampliado: como listar bases del contenedor, que es cada
+- `docs/referencia/comandos.md` ampliado: como listar bases del contenedor, que es cada
   una, como crear una base nueva, y por que las comillas simples/dobles en
   los `docker exec ... sh -c '...'`.
 

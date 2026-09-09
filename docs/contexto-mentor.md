@@ -133,15 +133,20 @@ src/
     auth/                   registro y login
     email/                  envío con Resend
 docs/
-  openapi.yaml              14 operaciones documentadas
-  comandos.md               todos los comandos del proyecto
-  chuleta-tests.md          lo que aprendí de tests
-  chuleta-js.md             mis puntos débiles de JavaScript
-  continuar-aqui.md         el plan de trabajo y el estado del deploy
+  README.md                 índice de toda la documentación
   contexto-mentor.md        este archivo
-  pruebas.md                pruebas manuales con curl
-  api.md                    notas de la API
+  continuar-aqui.md         el plan de trabajo y el estado del deploy
+  arquitectura.md           las capas, el recorrido de una petición, la defensa
+  openapi.yaml              14 operaciones documentadas (NO MOVER: app.ts la lee)
   postman/                  la colección exportada
+  referencia/
+    comandos.md             todos los comandos del proyecto
+    api.md                  guía de uso de los endpoints
+    pruebas.md              pruebas manuales con curl
+  chuletas/
+    tests.md                lo que aprendí de tests
+    javascript.md           mis puntos débiles de JavaScript
+    entornos.md             por qué existen .env y .env.test
 ```
 
 ## Endpoints
@@ -285,7 +290,7 @@ pregúntame antes de explicar.
 
 ## Tests
 
-Todo lo de `docs/chuleta-tests.md`, que escribí yo. En resumen:
+Todo lo de `docs/chuletas/tests.md`, que escribí yo. En resumen:
 
 - **Las dos fases de Jest**: registro (el archivo se ejecuta para _listar_ los
   tests; por eso `describe` **nunca** lleva `async`) y ejecución.
@@ -349,7 +354,7 @@ Todo lo de `docs/chuleta-tests.md`, que escribí yo. En resumen:
 ## El grande: JavaScript base
 
 No es el backend lo que me cuesta, es el JavaScript de debajo. Está todo en
-`docs/chuleta-js.md`. Los que me han mordido:
+`docs/chuletas/javascript.md`. Los que me han mordido:
 
 - `undefined` vs `null`
 - `===` vs `==`
@@ -550,9 +555,10 @@ sepa resolver dudas yo solo.
 
 # 10. Cómo empezar la sesión
 
-1. **Explora el proyecto tú mismo** antes de opinar. Lee este archivo,
-   `docs/continuar-aqui.md`, `docs/chuleta-tests.md`, `docs/chuleta-js.md` y
-   `docs/comandos.md`.
+1. **Explora el proyecto tú mismo** antes de opinar. Empieza por
+   `docs/README.md`, que es el índice, y lee este archivo,
+   `docs/continuar-aqui.md`, `docs/arquitectura.md`, `docs/chuletas/tests.md`,
+   `docs/chuletas/javascript.md` y `docs/referencia/comandos.md`.
 2. **Comprueba el estado real**, no te fíes de mis notas:
    ```bash
    git branch --show-current

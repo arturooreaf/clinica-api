@@ -142,11 +142,11 @@ Lista todas las bases del servidor Postgres, no solo la de desarrollo.
 
 ### Bases que hay en el contenedor
 
-| Base                                  | Para que                                           |
-| -------------------------------------- | --------------------------------------------------- |
-| `BBDDcareexpand`                       | desarrollo (`npm run dev`)                          |
-| `clinica_test`                         | tests (bloque 3 del plan, ver `continuar-aqui.md`)  |
-| `postgres`, `template0`, `template1`   | internas de Postgres, no se tocan                   |
+| Base                                 | Para que                                              |
+| ------------------------------------ | ----------------------------------------------------- |
+| `BBDDcareexpand`                     | desarrollo (`npm run dev`)                            |
+| `clinica_test`                       | tests (bloque 3 del plan, ver `../continuar-aqui.md`) |
+| `postgres`, `template0`, `template1` | internas de Postgres, no se tocan                     |
 
 ### Crear una base nueva
 
@@ -176,6 +176,39 @@ puerto) es igual.
 **No se sube a Git** -- esta en `.gitignore` junto a `.env`, porque lleva una
 cadena de conexion real. Mismo motivo que `.env`, mismo tratamiento.
 
+**Trampa con la extension de Jest en VS Code:** ese runner arranca un proceso
+de fondo que lee `.env.test` **una sola vez**, al arrancar. Si cambias el
+archivo despues, la extension sigue usando la version vieja en memoria y
+puede marcar tests en rojo que en terminal (`npm test`, proceso nuevo cada
+vez) pasan bien. Si algo falla solo en la extension y no en terminal,
+reinicia primero: paleta de comandos (`Cmd+Shift+P`) -> `Developer: Reload
+Window`.
+
+### El mapa completo: los tres entornos
+
+Toda la app decide a que base habla en un solo punto: `DATABASE_URL`, leida en
+`src/common/config/env.ts`. Nunca hay que tocar el codigo para cambiar de
+base, solo esa variable. Tres entornos, tres bases, un mismo mecanismo:
+
+| Entorno                    | Quien lo enciende               | Base             | De donde sale `DATABASE_URL`                                 |
+| -------------------------- | ------------------------------- | ---------------- | ------------------------------------------------------------ |
+| Desarrollo (`npm run dev`) | yo, con `docker compose up -d`  | `BBDDcareexpand` | `.env`                                                       |
+| Test (`npm test`)          | Jest fija `NODE_ENV=test` solo  | `clinica_test`   | `.env.test` (lo carga `env.ts` cuando `NODE_ENV === "test"`) |
+| Produccion (Render)        | Render, 24/7, no lo enciendo yo | `crud-defend-db` | variable puesta a mano en el panel de Render                 |
+
+Ninguno de los tres sabe que existen los otros dos. El codigo es identico en
+los tres sitios; lo unico que cambia es de donde sale esa variable.
+
+**Como llegaron las tablas a cada base:** las migraciones (`npm run migrate up`)
+son solo SQL. Se corren apuntando `DATABASE_URL` a la base que toque en cada
+momento -- por eso se pudo migrar Render desde mi propio Mac, sin "subir" nada,
+solo cambiando esa variable antes del comando.
+
+**El Build Command de Render** (`npm install --include=dev && npm run build`):
+instala tambien las devDependencies (hace falta `typescript`, que es una) y
+luego compila con `tsc`. El **Start Command** (`npm start`) arranca el
+JavaScript ya compilado en `dist/`, no el TypeScript original.
+
 ---
 
 ## Documentación de la API
@@ -195,7 +228,7 @@ Se importa desde Postman con _Import > Raw text_.
 
 ## Pruebas manuales rápidas
 
-Secuencia completa en `docs/pruebas.md`. Lo mínimo:
+Secuencia completa en `docs/referencia/pruebas.md`. Lo mínimo:
 
 ```bash
 curl http://localhost:3000/
@@ -301,6 +334,13 @@ npm install                    # instalar todo lo del package.json
 npm install <paquete>          # dependencia de produccion
 npm install -D <paquete>       # dependencia de desarrollo
 ```
+
+Analogia: montar un mueble de IKEA. Las `dependencies` son las piezas que se
+quedan puestas en el mueble final (patas, tornillos) -- sin ellas no hay
+mueble. Las `devDependencies` son las herramientas para montarlo
+(destornillador) -- hacen falta mientras se construye, pero no se quedan
+pegadas al resultado. Una vez que `tsc` compilo el codigo a `dist/`, ese
+JavaScript se ejecuta con `node` sin necesitar TypeScript instalado.
 
 La pregunta que decide dónde va: **¿esto se ejecuta en el servidor?** Si la
 respuesta es sí, va en `dependencies`.
