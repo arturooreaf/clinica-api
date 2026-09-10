@@ -75,3 +75,9 @@ docs/
 - `referencia/api.md` y `referencia/pruebas.md` se solapan: los dos explican
   cómo probar los endpoints a mano con `curl`. Habría que fundirlos en uno o
   dejar claro qué cubre cada uno.
+
+## Refuerzo
+
+- [`refuerzo/README.md`](refuerzo/README.md) — puntos a reforzar detectados
+  trabajando en el proyecto: fundamentos flojos, patrones de error que se
+  repiten, y la deuda tecnica pendiente.
