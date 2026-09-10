@@ -208,3 +208,28 @@ describe("Autorizacion GET /patients/:id", () => {
     expect(response.body).not.toHaveProperty("name");
   });
 });
+
+describe("GET /patients/:id", () => {
+  it("Obtenemos un usuario pero este no existe o esta vacio y devuelve un 404 - EdgeCases ", async () => {
+    const response = await request(app)
+      .get("/patients/1")
+      .set("Authorization", `Bearer ${tokenValido}`);
+    expect(response.status).toBe(404);
+  });
+});
+
+describe("Autorizacion DELETE /patients/:id", () => {
+  it("Un medico intenta eliminar a un paciente que no le corresponde y devuelve un 403", async () => {
+    await pool.query(
+      `INSERT INTO users(id, name, email, password_hash) VALUES(1, 'Medico1', 'medico1@gmail.com', 'hash_falso'); 
+       INSERT INTO patients(id, name, age, diagnosis, owner_id) VALUES (1, 'Quini', 33, 'gripe', 1);`,
+    );
+    const response = await request(app)
+      .delete("/patients/1")
+      .set("Authorization", `Bearer ${tokenValido2}`);
+
+    expect(response.status).toBe(403);
+    const check = await pool.query("SELECT * FROM patients WHERE id = 1");
+    expect(check.rowCount).toBe(1);
+  });
+});
