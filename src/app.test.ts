@@ -141,7 +141,7 @@ describe("GET /patients/:id - HappyPath", () => {
     const response = await request(app)
       .get("/patients/1")
       .set("Authorization", `Bearer ${tokenValido}`);
-//comprobacion
+    //comprobacion
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("id");
     expect(response.body.name).toBe("Quini");
@@ -151,31 +151,26 @@ describe("GET /patients/:id - HappyPath", () => {
   });
 });
 
-
-
 //CREACION
 describe("PATCH /patients/:id - HappyPath", () => {
-//PREPARACION
-  it("Actualiza un paciente y devuelve un 200", async () =>{
+  //PREPARACION
+  it("Actualiza un paciente y devuelve un 200", async () => {
     await pool.query(
-       `INSERT INTO users(id, name, email, password_hash) VALUES(1, 'Medico2', 'medico2@gmail.com', 'hash_falso'); 
+      `INSERT INTO users(id, name, email, password_hash) VALUES(1, 'Medico2', 'medico2@gmail.com', 'hash_falso'); 
        INSERT INTO patients(id, name, age, diagnosis, owner_id) VALUES (1, 'Quini', 33, 'gripe', 1);`,
-      );
-//ACCION
-const response = await request(app)
+    );
+    //ACCION
+    const response = await request(app)
       .patch("/patients/1")
       .set("Authorization", `Bearer ${tokenValido}`)
-      .send ({diagnosis: "recuperado"})
+      .send({ diagnosis: "recuperado" });
 
- //COMPROBACION
-expect(response.status).toBe(200)
-expect(response.body).toHaveProperty("id")
-expect(response.body.diagnosis).toBe("recuperado")
-
+    //COMPROBACION
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("id");
+    expect(response.body.diagnosis).toBe("recuperado");
   });
 });
-
-
 
 //CREACION
 describe("DELETE /patients/:id -HappyPath", () => {
@@ -185,17 +180,31 @@ describe("DELETE /patients/:id -HappyPath", () => {
       `INSERT INTO users(id, name, email, password_hash) VALUES (3, 'RaulMedico', 'medico2@gmail.com', 'hash_falso'); 
        INSERT INTO patients(id, name, age, diagnosis, owner_id) VALUES (1, 'Quini', 33, 'gripe', 3);`,
     );
-//ACCION
-const response = await request(app)
-.delete("/patients/1")
-.set("Authorization", `Bearer ${tokenValido3}`)
-//Comprobacion
-expect(response.status).toBe(204)
+    //ACCION
+    const response = await request(app)
+      .delete("/patients/1")
+      .set("Authorization", `Bearer ${tokenValido3}`);
+    //Comprobacion
+    expect(response.status).toBe(204);
 
+    const check = await pool.query("SELECT * FROM patients WHERE id = 1");
+    expect(check.rowCount).toBe(0);
   });
 });
-/**
- * 3. El 403 de verdad
-Necesitas dos usuarios con tokens distintos (jwt.sign({userId: 1}, ...) y otro con userId: 2), y un paciente cuyo owner_id sea 1. El usuario 2 intenta GET /patients/:id (o PATCH/DELETE, el que prefieras) sobre el paciente del usuario 1
- → 403. Esto es lo único que hoy no podías probar sin base de test, y ahora sí. /***/ 
 
+describe("Autorizacion GET /patients/:id", () => {
+  //Accion
+  it("El usuario numero 2 intenta acceder a ese paciente y devuelve un 403", async () => {
+    await pool.query(
+      `INSERT INTO users(id, name, email, password_hash) VALUES(1, 'Medico1', 'medico1@gmail.com', 'hash_falso'); 
+       INSERT INTO patients(id, name, age, diagnosis, owner_id) VALUES (1, 'Quini', 33, 'gripe', 1);`,
+    );
+
+    const response = await request(app)
+      .get("/patients/1")
+      .set("Authorization", `Bearer ${tokenValido2}`);
+    expect(response.status).toBe(403);
+    expect(response.body).toHaveProperty("error");
+    expect(response.body).not.toHaveProperty("name");
+  });
+});
