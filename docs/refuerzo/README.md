@@ -11,7 +11,7 @@ Origen: sesión del 10/09/2026 (base de test, happy paths y primeros edge cases)
 ## 1. La prioridad número uno: JavaScript base
 
 El proyecto va por delante de los fundamentos. Eso es normal aprendiendo en el
-trabajo, pero tiene un riesgo concreto: el repo abre puertas y los fundamentos
+trabajo, pero tiene un riesgo concreto: el repo abre puertas y los fundamentosgit add docs/ && git commit -m "docs: add reinforcement notes"
 deciden si entras.
 
 Lo que hay que asentar, por orden:

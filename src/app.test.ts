@@ -234,22 +234,20 @@ describe("Autorizacion DELETE /patients/:id", () => {
   });
 });
 
-
-describe ("Authorization PATCH /patients/:id", () => {
-  it("Un medico intenta actualizar los datos de un paciente que no le corresponde y devuelve un 403", async () =>{
+describe("Authorization PATCH /patients/:id", () => {
+  it("Un medico intenta actualizar los datos de un paciente que no le corresponde y devuelve un 403", async () => {
     await pool.query(
       `INSERT INTO users(id, name, email, password_hash) VALUES(1, 'Medico1','medico1@gmail.com', 'hash_falso' );
       INSERT INTO patients(id, name, age, diagnosis, owner_id) VALUES (1, 'Quini', 33, 'gripe', 1);`,
     );
     const response = await request(app)
-    .patch("/patients/1")
-    .set("Authorization", `Bearer ${tokenValido2}`)
-    .send({diagnosis: 'Recuperado'});
+      .patch("/patients/1")
+      .set("Authorization", `Bearer ${tokenValido2}`)
+      .send({ diagnosis: "Recuperado" });
 
-    expect (response.status).toBe(403);
+    expect(response.status).toBe(403);
 
-  const check = await pool.query("SELECT * FROM patients WHERE id = 1");
-expect (check.rows[0].diagnosis).toBe("gripe")
-
-  })
-})
+    const check = await pool.query("SELECT * FROM patients WHERE id = 1");
+    expect(check.rows[0].diagnosis).toBe("gripe");
+  });
+});
