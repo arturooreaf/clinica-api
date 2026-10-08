@@ -1,4 +1,4 @@
-# CRUD clinica — API de pacientes y citas
+# CRUD — API de pacientes y citas
 
 API REST construida con Node, TypeScript y Express, con PostgreSQL en Docker.
 Proyecto de formación: gestiona pacientes, citas y autenticación de usuarios.
