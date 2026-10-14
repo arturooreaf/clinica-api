@@ -142,11 +142,11 @@ Lista todas las bases del servidor Postgres, no solo la de desarrollo.
 
 ### Bases que hay en el contenedor
 
-| Base                                 | Para que                                              |
-| ------------------------------------ | ----------------------------------------------------- |
-| `clinica_dev`                     | desarrollo (`npm run dev`)                            |
-| `clinica_test`                       | tests (bloque 3 del plan, ver `../continuar-aqui.md`) |
-| `postgres`, `template0`, `template1` | internas de Postgres, no se tocan                     |
+| Base                                 | Para que                          |
+| ------------------------------------ | --------------------------------- |
+| `clinica_dev`                        | desarrollo (`npm run dev`)        |
+| `clinica_test`                       | tests                             |
+| `postgres`, `template0`, `template1` | internas de Postgres, no se tocan |
 
 ### Crear una base nueva
 
@@ -192,7 +192,7 @@ base, solo esa variable. Tres entornos, tres bases, un mismo mecanismo:
 
 | Entorno                    | Quien lo enciende               | Base             | De donde sale `DATABASE_URL`                                 |
 | -------------------------- | ------------------------------- | ---------------- | ------------------------------------------------------------ |
-| Desarrollo (`npm run dev`) | yo, con `docker compose up -d`  | `clinica_dev` | `.env`                                                       |
+| Desarrollo (`npm run dev`) | yo, con `docker compose up -d`  | `clinica_dev`    | `.env`                                                       |
 | Test (`npm test`)          | Jest fija `NODE_ENV=test` solo  | `clinica_test`   | `.env.test` (lo carga `env.ts` cuando `NODE_ENV === "test"`) |
 | Produccion (Render)        | Render, 24/7, no lo enciendo yo | `clinica-db-prod` | variable puesta a mano en el panel de Render                 |
 

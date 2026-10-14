@@ -3,3 +3,6 @@ dist/
 .env
 .DS_STORE
 .env.test
+# Notas personales (no se publican)
+docs/contexto-mentor.md
+docs/continuar-aqui.md
