@@ -190,10 +190,10 @@ Toda la app decide a que base habla en un solo punto: `DATABASE_URL`, leida en
 `src/common/config/env.ts`. Nunca hay que tocar el codigo para cambiar de
 base, solo esa variable. Tres entornos, tres bases, un mismo mecanismo:
 
-| Entorno                    | Quien lo enciende               | Base             | De donde sale `DATABASE_URL`                                 |
-| -------------------------- | ------------------------------- | ---------------- | ------------------------------------------------------------ |
-| Desarrollo (`npm run dev`) | yo, con `docker compose up -d`  | `clinica_dev`    | `.env`                                                       |
-| Test (`npm test`)          | Jest fija `NODE_ENV=test` solo  | `clinica_test`   | `.env.test` (lo carga `env.ts` cuando `NODE_ENV === "test"`) |
+| Entorno                    | Quien lo enciende               | Base              | De donde sale `DATABASE_URL`                                 |
+| -------------------------- | ------------------------------- | ----------------- | ------------------------------------------------------------ |
+| Desarrollo (`npm run dev`) | yo, con `docker compose up -d`  | `clinica_dev`     | `.env`                                                       |
+| Test (`npm test`)          | Jest fija `NODE_ENV=test` solo  | `clinica_test`    | `.env.test` (lo carga `env.ts` cuando `NODE_ENV === "test"`) |
 | Produccion (Render)        | Render, 24/7, no lo enciendo yo | `clinica-db-prod` | variable puesta a mano en el panel de Render                 |
 
 Ninguno de los tres sabe que existen los otros dos. El codigo es identico en
