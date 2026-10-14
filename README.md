@@ -1,220 +1,176 @@
-# CRUD — API de pacientes y citas
+# clinica-api
 
-API REST construida con Node, TypeScript y Express, con PostgreSQL en Docker.
-Proyecto de formación: gestiona pacientes, citas y autenticación de usuarios.
+[![CI](https://github.com/arturooreaf/clinica-api/actions/workflows/ci.yml/badge.svg)](https://github.com/arturooreaf/clinica-api/actions/workflows/ci.yml)
+![Node.js](https://img.shields.io/badge/Node.js_24-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Express](https://img.shields.io/badge/Express_5-000000?style=flat-square&logo=express&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL_16-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
 
----
+REST API to manage **patients and appointments** for a clinic, with user authentication and per-user data ownership.
 
-## Stack
-
-| Tecnología            | Para qué                                          |
-| --------------------- | ------------------------------------------------- |
-| **Node + TypeScript** | Entorno de ejecución y tipado estático            |
-| **Express 5**         | Framework HTTP: rutas y middlewares               |
-| **PostgreSQL 16**     | Base de datos relacional, en un contenedor Docker |
-| **JWT + bcrypt**      | Autenticación y hasheo de contraseñas             |
+Built with Node.js, TypeScript and Express on top of PostgreSQL, using plain SQL with parameterized queries, versioned migrations and integration tests against a real database.
 
 ---
 
-## Dependencias
+## Features
 
-### Producción (`dependencies`)
+- **Authentication:** registration and login with **bcrypt**-hashed passwords and **JWT** access tokens.
+- **Data ownership:** every patient belongs to the user who created it. A user can't read, update or delete another user's patients.
+- **Patients and appointments:** full CRUD with partial updates (`PATCH`).
+- **Transactional email** through [Resend](https://resend.com).
+- **OpenAPI documentation** served with Swagger UI at `/docs`.
+- **Rate limiting:** 5 attempts every 15 minutes on login and register, 100 requests every 15 minutes elsewhere.
+- **Structured logging** in JSON with Pino.
+- **Fail-fast configuration:** the app refuses to start if a required environment variable is missing.
 
-| Paquete              | Para qué                                                                           |
-| -------------------- | ---------------------------------------------------------------------------------- |
-| `express`            | Framework HTTP: enrutado, middlewares, `req`/`res`                                 |
-| `pg`                 | Cliente de PostgreSQL. Aporta el pool de conexiones y las consultas parametrizadas |
-| `bcrypt`             | Hashea las contraseñas al registrar y las compara al iniciar sesión                |
-| `jsonwebtoken`       | Firma los JWT en el login y los verifica en el middleware de autenticación         |
-| `dotenv`             | Carga el fichero `.env` dentro de `process.env`                                    |
-| `cors`               | Añade las cabeceras CORS y responde al preflight `OPTIONS`                         |
-| `express-rate-limit` | Limita las peticiones por IP. Devuelve 429 al superarlas                           |
-| `pino`               | Logger estructurado. Escribe los logs en JSON con nivel y marca de tiempo          |
+## Tech stack
 
-### Desarrollo (`devDependencies`)
+| Technology               | Purpose                                          |
+| ------------------------ | ------------------------------------------------ |
+| **Node.js + TypeScript** | Runtime and static typing (strict mode)          |
+| **Express 5**            | HTTP routing and middleware                      |
+| **PostgreSQL 16 + `pg`** | Relational database, parameterized SQL queries   |
+| **node-pg-migrate**      | Versioned database migrations                    |
+| **JWT + bcrypt**         | Authentication and password hashing              |
+| **Jest + Supertest**     | Integration tests against a real PostgreSQL      |
+| **ESLint + Prettier**    | Linting and formatting                           |
+| **Docker**               | Database, API image and full local stack         |
+| **GitHub Actions**       | CI: lint, format, typecheck, build, tests, image |
 
-| Paquete           | Para qué                                                               |
-| ----------------- | ---------------------------------------------------------------------- |
-| `typescript`      | Compilador y comprobación de tipos                                     |
-| `tsx`             | Ejecuta TypeScript sin compilar antes. Con `watch`, recarga al guardar |
-| `node-pg-migrate` | Sistema de migraciones de la base de datos                             |
-| `pino-pretty`     | Formatea los logs de Pino de forma legible. Solo en local              |
-| `prettier`        | Formateo automático del código                                         |
-| `@types/*`        | Definiciones de tipos para las librerías escritas en JavaScript        |
+## Architecture
 
-> **Criterio:** en `dependencies` va lo que el servidor necesita **ejecutándose**.
-> En `devDependencies`, lo que solo hace falta **mientras se desarrolla**.
-> Al desplegar se instala con `npm ci --omit=dev`.
+The code is organized **by domain module**, and each module is split into layers that only talk to the layer next to them:
 
----
+```
+HTTP request
+   │
+   ▼
+routes ─► controller ─► service ─► repository ─► PostgreSQL
+          (HTTP)        (business)  (SQL)
+```
 
-## Estructura
+- The **controller** knows HTTP: it reads the request and picks the status code.
+- The **service** knows the business rules.
+- The **repository** knows SQL. No other layer writes queries.
 
 ```
 src/
-├── server.ts                  Punto de entrada. Monta middlewares y rutas
-├── common/                    Lo compartido por varios módulos
-│   ├── config/env.ts          Carga y valida las variables de entorno
-│   ├── logger.ts              Instancia de Pino
-│   ├── middlewares/           cors, logger, rateLimit, auth, error
-│   └── types/                 Extensiones de tipos (Request.user)
+├── server.ts                 Entry point
+├── app.ts                    Express app: middleware, routes, Swagger
+├── common/                   Shared code
+│   ├── config/env.ts         Loads and validates environment variables
+│   ├── logger.ts             Pino instance
+│   └── middlewares/          auth, cors, error, logger, rate limit
 ├── database/
-│   ├── pool.ts                Pool de conexiones a PostgreSQL
-│   └── migrations/            Histórico de cambios del esquema
-└── modules/                   Un dominio de negocio por carpeta
+│   ├── pool.ts               PostgreSQL connection pool
+│   └── migrations/           Schema history
+└── modules/                  One business domain per folder
+    ├── auth/
     ├── patients/
     ├── appointments/
-    └── auth/
+    └── email/
 ```
 
-Cada módulo sigue la misma forma:
+Dependencies always point **from modules to `common/`**, never the other way around.
 
+## Getting started
+
+### Option A: everything in Docker
+
+```bash
+cp .env.example .env                        # fill in the values
+docker compose --profile full up -d --build
 ```
-<modulo>/
-├── <modulo>.routes.ts         Qué URL llama a qué función
-├── <modulo>.controller.ts     Traduce entre HTTP y la aplicación
-├── <modulo>.service.ts        Reglas de negocio
-├── types/                     Interfaces del dominio
-└── infra/repositories/        Acceso a la base de datos (SQL)
-```
 
-**Criterios de organización:**
+This starts PostgreSQL, runs the migrations and starts the API at `http://localhost:3000`.
 
-- Si un archivo lo usa **un solo módulo**, vive dentro de ese módulo.
-  Si lo usan **varios**, vive en `common/`.
-- Las dependencias van **de los módulos hacia `common/`**, nunca al revés.
-- El controlador conoce HTTP, el servicio conoce el negocio y el repositorio
-  conoce SQL. Ninguna capa invade la de al lado.
-
----
-
-## Puesta en marcha
-
-**1. Variables de entorno.** Copiar la plantilla y rellenarla:
+### Option B: local development
 
 ```bash
 cp .env.example .env
-```
-
-| Variable                                              | Ejemplo                                                 |
-| ----------------------------------------------------- | ------------------------------------------------------- |
-| `DATABASE_URL`                                        | `postgres://usuario:clave@localhost:5433/basededatos`   |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Credenciales del contenedor                             |
-| `JWT_SECRET`                                          | Cadena aleatoria. Generar con `openssl rand -base64 32` |
-| `CORS_ORIGIN`                                         | Orígenes permitidos, separados por comas                |
-
-La aplicación **no arranca** si falta alguna: se validan todas al inicio.
-
-**2. Base de datos:**
-
-```bash
-docker compose up -d
-```
-
-**3. Migraciones:**
-
-```bash
+docker compose up -d     # only PostgreSQL
+npm install
 npm run migrate up
+npm run dev              # http://localhost:3000, reloads on save
 ```
 
-**4. Servidor:**
+### Environment variables
+
+| Variable                                              | Example                                           |
+| ----------------------------------------------------- | ------------------------------------------------- |
+| `DATABASE_URL`                                        | `postgres://user:password@localhost:5433/clinica` |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Credentials for the database container            |
+| `JWT_SECRET`                                          | Random string, e.g. `openssl rand -base64 32`     |
+| `CORS_ORIGIN`                                         | Allowed origins, comma-separated                  |
+| `RESEND_API_KEY` / `RESEND_FROM`                      | Resend credentials and sender address             |
+| `PORT`                                                | Optional, defaults to `3000`                      |
+
+## API
+
+Interactive documentation at **`http://localhost:3000/docs`** (source in [`docs/openapi.yaml`](docs/openapi.yaml)).
+
+| Method   | Endpoint            | Auth | Description                             |
+| -------- | ------------------- | :--: | --------------------------------------- |
+| `POST`   | `/auth/register`    |      | Create a user (409 if the email exists) |
+| `POST`   | `/auth/login`       |      | Get a JWT valid for 1 hour              |
+| `GET`    | `/patients`         | Yes  | List your patients                      |
+| `GET`    | `/patients/:id`     | Yes  | Get one of your patients                |
+| `POST`   | `/patients`         | Yes  | Create a patient                        |
+| `PATCH`  | `/patients/:id`     | Yes  | Update some fields                      |
+| `DELETE` | `/patients/:id`     | Yes  | Delete a patient                        |
+| `GET`    | `/appointments`     | Yes  | List appointments                       |
+| `GET`    | `/appointments/:id` | Yes  | Get an appointment                      |
+| `POST`   | `/appointments`     | Yes  | Create an appointment                   |
+| `PATCH`  | `/appointments/:id` | Yes  | Update some fields                      |
+| `DELETE` | `/appointments/:id` | Yes  | Delete an appointment                   |
+| `POST`   | `/emails`           | Yes  | Send an email                           |
+
+Protected endpoints require the header `Authorization: Bearer <token>`.
+
+## Testing
 
 ```bash
-npm run dev
+npm test
 ```
 
-Escucha en `http://localhost:3000`.
+The test suite runs **against a real PostgreSQL database**, not mocks. Every test starts from empty tables (`TRUNCATE ... CASCADE`), and the suite covers happy paths, validation errors (400), missing or invalid tokens (401), missing resources (404) and **ownership rules**: a user can't access another user's patients.
 
----
+Locally, tests read their configuration from `.env.test`. In CI, GitHub Actions starts a PostgreSQL service container, runs the migrations and then the tests on every push.
 
-## Endpoints
+## Security
 
-### Autenticación — públicos
-
-| Método | Ruta             | Descripción                                         |
-| ------ | ---------------- | --------------------------------------------------- |
-| `POST` | `/auth/register` | Crea un usuario. Devuelve 409 si el email ya existe |
-| `POST` | `/auth/login`    | Devuelve un JWT válido durante 1 hora               |
-
-### Pacientes y citas — requieren token
-
-Todas exigen la cabecera `Authorization: Bearer <token>`.
-
-| Método   | Ruta                | Descripción                |
-| -------- | ------------------- | -------------------------- |
-| `GET`    | `/patients`         | Lista todos los pacientes  |
-| `GET`    | `/patients/:id`     | Devuelve un paciente       |
-| `POST`   | `/patients`         | Crea un paciente           |
-| `PATCH`  | `/patients/:id`     | Actualiza campos concretos |
-| `DELETE` | `/patients/:id`     | Elimina un paciente        |
-| `GET`    | `/appointments`     | Lista todas las citas      |
-| `GET`    | `/appointments/:id` | Devuelve una cita          |
-| `POST`   | `/appointments`     | Crea una cita              |
-| `PATCH`  | `/appointments/:id` | Actualiza campos concretos |
-| `DELETE` | `/appointments/:id` | Elimina una cita           |
-
-### Códigos de estado
-
-| Código | Cuándo                                        |
-| ------ | --------------------------------------------- |
-| `200`  | Petición correcta                             |
-| `201`  | Recurso creado                                |
-| `204`  | Correcta, sin contenido que devolver (DELETE) |
-| `400`  | Datos de entrada inválidos                    |
-| `401`  | Token ausente, inválido o caducado            |
-| `404`  | El recurso no existe                          |
-| `409`  | Conflicto (email ya registrado)               |
-| `429`  | Demasiadas peticiones                         |
-| `500`  | Error interno                                 |
-
----
-
-## Seguridad
-
-- **Contraseñas hasheadas con bcrypt.** Nunca se guardan en texto plano ni se
-  pueden recuperar: en el login se vuelve a hashear y se comparan los hashes.
-- **JWT con expiración de 1 hora.** Un JWT no se puede revocar, así que caduca.
-- **Consultas parametrizadas** (`$1`, `$2`) en todo el acceso a datos, para que
-  los valores nunca se interpreten como SQL.
-- **Rate limiting**: 5 intentos fallidos cada 15 minutos en login y registro,
-  100 peticiones cada 15 minutos en el resto.
-- **CORS restringido** a los orígenes de `CORS_ORIGIN`.
-- **Secretos fuera del código**: el `.env` está en `.gitignore`; se versiona
-  únicamente `.env.example` con los nombres y sin los valores.
-- **Validación de la configuración al arrancar**: si falta una variable de
-  entorno, la aplicación falla de inmediato en lugar de más tarde en ejecución.
-
----
-
-## Estado del proyecto
-
-Proyecto en formación. Implementado hasta el módulo 10 de 13.
-
-**Pendiente:**
-
-- Documentación de la API con Swagger / OpenAPI
-- Tests con Vitest y Supertest
-- ESLint
-- Despliegue
-
-**Limitaciones conocidas:**
-
-- **Hay autenticación pero no autorización.** El middleware ya inyecta el
-  usuario autenticado en `req.user`, pero ningún servicio comprueba la
-  propiedad del recurso: falta relacionar cada paciente con su dueño.
-- **La validación de entrada solo cubre `POST /patients`.** Faltan el resto de
-  endpoints; la intención es sustituir las comprobaciones manuales por esquemas
-  de validación.
-- **El manejador de errores global está montado pero no llega a usarse**, porque
-  cada controlador captura sus propios errores. Pendiente de introducir clases
-  de error propias que el manejador traduzca a códigos de estado.
-
----
+- Passwords hashed with **bcrypt**; never stored in plain text.
+- **Short-lived JWTs** (1 hour).
+- **Parameterized queries** (`$1`, `$2`) everywhere, so input is never interpreted as SQL.
+- **Rate limiting** on authentication endpoints against brute force.
+- **CORS** restricted to the configured origins.
+- **Secrets out of the code:** `.env` is git-ignored; only `.env.example` is versioned.
 
 ## Scripts
 
-| Comando                | Qué hace                                 |
-| ---------------------- | ---------------------------------------- |
-| `npm run dev`          | Arranca el servidor y recarga al guardar |
-| `npm run migrate up`   | Aplica las migraciones pendientes        |
-| `npm run migrate down` | Revierte la última migración             |
+| Command                | What it does                        |
+| ---------------------- | ----------------------------------- |
+| `npm run dev`          | Start the server and reload on save |
+| `npm run build`        | Compile TypeScript to `dist/`       |
+| `npm start`            | Run the compiled server             |
+| `npm test`             | Run the test suite                  |
+| `npm run lint`         | Lint with ESLint                    |
+| `npm run format:check` | Check formatting with Prettier      |
+| `npm run typecheck`    | Type-check without emitting files   |
+| `npm run migrate up`   | Apply pending migrations            |
+| `npm run migrate down` | Revert the last migration           |
+
+## Roadmap
+
+- [x] CRUD for patients and appointments
+- [x] Authentication with JWT and bcrypt
+- [x] Per-user ownership of patients
+- [x] OpenAPI documentation with Swagger UI
+- [x] Integration tests with Jest and Supertest
+- [x] CI with GitHub Actions and a Docker image
+- [ ] Ownership rules for appointments
+- [ ] Schema-based input validation on every endpoint
+- [ ] Custom error classes handled by the global error middleware
+- [ ] Refresh tokens and token revocation
+- [ ] Public deployment with live Swagger docs
