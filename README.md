@@ -1,6 +1,7 @@
 # clinica-api
 
 [![CI](https://github.com/arturooreaf/clinica-api/actions/workflows/ci.yml/badge.svg)](https://github.com/arturooreaf/clinica-api/actions/workflows/ci.yml)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 ![Node.js](https://img.shields.io/badge/Node.js_24-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
 ![Express](https://img.shields.io/badge/Express_5-000000?style=flat-square&logo=express&logoColor=white)
