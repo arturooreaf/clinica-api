@@ -4,17 +4,6 @@
 
 ---
 
-## Empezar una sesión de trabajo
-
-Estos dos son el punto de entrada. Se leen juntos y en este orden:
-
-| Documento                                  | Para qué                                                                                 |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| [`contexto-mentor.md`](contexto-mentor.md) | Quién soy, cómo quiero que se me enseñe, y todo lo que ya sé (para que no me lo repitan) |
-| [`continuar-aqui.md`](continuar-aqui.md)   | Dónde me quedé: estado real del proyecto, decisiones tomadas y plan de trabajo en orden  |
-
----
-
 ## Entender el proyecto
 
 | Documento                            | Para qué                                                                                                                                                                  |
@@ -53,8 +42,6 @@ proyecto: son para que no se me olvide.
 ```
 docs/
 ├── README.md              este índice
-├── contexto-mentor.md     cómo enseñarme y qué sé ya
-├── continuar-aqui.md      estado y plan de trabajo
 ├── arquitectura.md        cómo está montado por dentro
 ├── openapi.yaml           especificación de la API (NO MOVER)
 ├── postman/               colección exportada
