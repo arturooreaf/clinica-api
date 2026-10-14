@@ -12,6 +12,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 const app = express();
+// En Render la petición llega a través de un proxy: sin esto, el rate limit
+// vería la IP del proxy y todos los usuarios compartirían el mismo límite
+app.set("trust proxy", 1);
 
 // middlewares globales
 app.use(corsMiddleware);
