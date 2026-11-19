@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Clinica API",
-    "description": "Coleccion de pruebas de la API de pacientes y citas.\n\nCOMO USARLA\n1. Arranca la API: docker compose up -d && npm run dev\n2. Ejecuta 'Auth > Login'. Su script guarda el token automaticamente.\n3. El resto de peticiones ya lo usan: no hay que copiar nada.\n\nEl token caduca a la hora: si empiezan a salir 401, repite el Login.\n\nLa peticion 'Pacientes > Eliminar' borra el paciente 1, asi que la segunda\nvez devolvera 404. Es lo esperado.",
+    "description": "Test collection for the patients and appointments API.\n\nHOW TO USE IT\n1. Start the API: docker compose up -d && npm run dev\n2. Run 'Auth > Login'. Its script saves the token automatically.\n3. Every other request already uses it: nothing to copy.\n\nThe token expires after one hour: if you start getting 401s, run Login again.\n\nThe 'Patients > Delete' request deletes patient 1, so the second time\nit returns 404. That is expected.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -28,10 +28,10 @@
   ],
   "item": [
     {
-      "name": "Salud",
+      "name": "Health",
       "item": [
         {
-          "name": "La API responde",
+          "name": "The API is up",
           "request": {
             "method": "GET",
             "header": [],
@@ -47,7 +47,7 @@
             "auth": {
               "type": "noauth"
             },
-            "description": "Ruta publica. Solo confirma que el servidor esta vivo."
+            "description": "Public route. It only confirms that the server is alive."
           },
           "event": [
             {
@@ -55,7 +55,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 200\", function () {",
+                  "pm.test(\"Responds 200\", function () {",
                   "  pm.response.to.have.status(200);",
                   "});"
                 ]
@@ -69,7 +69,7 @@
       "name": "Auth",
       "item": [
         {
-          "name": "Registro",
+          "name": "Register",
           "request": {
             "method": "POST",
             "header": [
@@ -93,14 +93,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"demo3@example.com\",\n  \"password\": \"Example123\",\n  \"name\": \"Demo Tres\"\n}",
+              "raw": "{\n  \"email\": \"demo3@example.com\",\n  \"password\": \"Example123\",\n  \"name\": \"Demo User Three\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "201 con id, email y name. Sin password_hash: eso lo garantiza UserView.\n409 si el email ya existe."
+            "description": "201 with id, email and name. No password_hash: UserView guarantees that.\n409 'Email is already registered' if the email already exists."
           }
         },
         {
@@ -135,7 +135,7 @@
                 }
               }
             },
-            "description": "Devuelve el JWT y lo guarda en la variable {{token}}.\nTarda ~90 ms por bcrypt; el resto van a 1-9 ms."
+            "description": "Returns the JWT and saves it in the {{token}} variable.\nTakes ~90 ms because of bcrypt; the other requests take 1-9 ms."
           },
           "event": [
             {
@@ -143,19 +143,19 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 200\", function () {",
+                  "pm.test(\"Responds 200\", function () {",
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "// Guarda el token en una variable de la coleccion",
-                  "// para que el resto de peticiones lo usen solas.",
+                  "// Save the token in a collection variable",
+                  "// so every other request uses it on its own.",
                   "const body = pm.response.json();",
                   "",
                   "if (body.token) {",
                   "  pm.collectionVariables.set(\"token\", body.token);",
-                  "  console.log(\"Token guardado\");",
+                  "  console.log(\"Token saved\");",
                   "} else {",
-                  "  console.warn(\"La respuesta no traia token\");",
+                  "  console.warn(\"The response had no token\");",
                   "}"
                 ]
               }
@@ -163,7 +163,7 @@
           ]
         },
         {
-          "name": "Login con credenciales incorrectas",
+          "name": "Login with wrong credentials",
           "request": {
             "method": "POST",
             "header": [
@@ -187,14 +187,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"demo@example.com\",\n  \"password\": \"incorrecta\"\n}",
+              "raw": "{\n  \"email\": \"demo@example.com\",\n  \"password\": \"WrongPassword1\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "401 'Malas credenciales'. El mismo mensaje que si el email no existe,\npara impedir la enumeracion de usuarios."
+            "description": "401 'Invalid credentials'. Same message as when the email does not exist,\nto prevent user enumeration."
           },
           "event": [
             {
@@ -202,7 +202,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 401\", function () {",
+                  "pm.test(\"Responds 401\", function () {",
                   "  pm.response.to.have.status(401);",
                   "});"
                 ]
@@ -213,10 +213,10 @@
       ]
     },
     {
-      "name": "Pacientes",
+      "name": "Patients",
       "item": [
         {
-          "name": "Listar",
+          "name": "List",
           "request": {
             "method": "GET",
             "header": [],
@@ -236,7 +236,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 200\", function () {",
+                  "pm.test(\"Responds 200\", function () {",
                   "  pm.response.to.have.status(200);",
                   "});"
                 ]
@@ -245,7 +245,7 @@
           ]
         },
         {
-          "name": "Obtener uno",
+          "name": "Get one",
           "request": {
             "method": "GET",
             "header": [],
@@ -262,7 +262,7 @@
           }
         },
         {
-          "name": "Crear",
+          "name": "Create",
           "request": {
             "method": "POST",
             "header": [
@@ -282,7 +282,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Ana Ruiz\",\n  \"age\": 34,\n  \"diagnosis\": \"Gripe\"\n}",
+              "raw": "{\n  \"name\": \"Marta Sánchez\",\n  \"age\": 34,\n  \"diagnosis\": \"Low back pain\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -296,7 +296,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 201\", function () {",
+                  "pm.test(\"Responds 201\", function () {",
                   "  pm.response.to.have.status(201);",
                   "});"
                 ]
@@ -305,7 +305,7 @@
           ]
         },
         {
-          "name": "Actualizar parcialmente",
+          "name": "Partial update",
           "request": {
             "method": "PATCH",
             "header": [
@@ -326,18 +326,18 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"diagnosis\": \"Alta\"\n}",
+              "raw": "{\n  \"diagnosis\": \"Discharged\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Solo cambia el campo enviado. El resto se conserva por el COALESCE del UPDATE."
+            "description": "Only the field sent changes. The rest is kept thanks to the COALESCE in the UPDATE.\nThe response does not include owner_id."
           }
         },
         {
-          "name": "Eliminar",
+          "name": "Delete",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -351,11 +351,11 @@
                 "1"
               ]
             },
-            "description": "204 sin cuerpo. Al borrar un paciente se borran sus citas (ON DELETE CASCADE)."
+            "description": "204 with no body. Deleting a patient also deletes their appointments (ON DELETE CASCADE)."
           }
         },
         {
-          "name": "Crear con datos invalidos",
+          "name": "Create with invalid data",
           "request": {
             "method": "POST",
             "header": [
@@ -375,14 +375,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Ana\",\n  \"age\": \"treinta y cuatro\"\n}",
+              "raw": "{\n  \"name\": \"Marta\",\n  \"age\": \"thirty-four\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "400. Lo corta el middleware de validacion antes del controller."
+            "description": "400 'Invalid data'. The validation middleware stops it before the controller."
           },
           "event": [
             {
@@ -390,7 +390,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 400\", function () {",
+                  "pm.test(\"Responds 400\", function () {",
                   "  pm.response.to.have.status(400);",
                   "});"
                 ]
@@ -399,7 +399,7 @@
           ]
         },
         {
-          "name": "Id que no existe",
+          "name": "Id that does not exist",
           "request": {
             "method": "GET",
             "header": [],
@@ -420,7 +420,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 404\", function () {",
+                  "pm.test(\"Responds 404\", function () {",
                   "  pm.response.to.have.status(404);",
                   "});"
                 ]
@@ -429,7 +429,7 @@
           ]
         },
         {
-          "name": "Id que no es numero",
+          "name": "Id that is not a number",
           "request": {
             "method": "GET",
             "header": [],
@@ -443,7 +443,7 @@
                 "abc"
               ]
             },
-            "description": "400. Lo corta el controller antes de tocar la base de datos."
+            "description": "400 'Id must be a number'. The controller stops it before touching the database."
           },
           "event": [
             {
@@ -451,7 +451,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 400\", function () {",
+                  "pm.test(\"Responds 400\", function () {",
                   "  pm.response.to.have.status(400);",
                   "});"
                 ]
@@ -462,10 +462,10 @@
       ]
     },
     {
-      "name": "Citas",
+      "name": "Appointments",
       "item": [
         {
-          "name": "Listar",
+          "name": "List",
           "request": {
             "method": "GET",
             "header": [],
@@ -485,7 +485,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 200\", function () {",
+                  "pm.test(\"Responds 200\", function () {",
                   "  pm.response.to.have.status(200);",
                   "});"
                 ]
@@ -494,7 +494,7 @@
           ]
         },
         {
-          "name": "Obtener una",
+          "name": "Get one",
           "request": {
             "method": "GET",
             "header": [],
@@ -511,7 +511,7 @@
           }
         },
         {
-          "name": "Crear",
+          "name": "Create",
           "request": {
             "method": "POST",
             "header": [
@@ -531,7 +531,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patient_id\": 1,\n  \"date\": \"2026-09-15T10:30:00Z\",\n  \"reason\": \"Revision\"\n}",
+              "raw": "{\n  \"patient_id\": 1,\n  \"date\": \"2026-09-15T10:30:00Z\",\n  \"reason\": \"Physiotherapy session\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -541,7 +541,7 @@
           }
         },
         {
-          "name": "Actualizar parcialmente",
+          "name": "Partial update",
           "request": {
             "method": "PATCH",
             "header": [
@@ -562,7 +562,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reason\": \"Revision anual\"\n}",
+              "raw": "{\n  \"reason\": \"Follow-up session\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -572,7 +572,7 @@
           }
         },
         {
-          "name": "Eliminar",
+          "name": "Delete",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -591,10 +591,10 @@
       ]
     },
     {
-      "name": "Correo",
+      "name": "Email",
       "item": [
         {
-          "name": "Enviar correo",
+          "name": "Send email",
           "request": {
             "method": "POST",
             "header": [
@@ -614,14 +614,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"to\": \"aoreaf@gmail.com\",\n  \"subject\": \"Prueba desde la API\",\n  \"text\": \"Funciona.\"\n}",
+              "raw": "{\n  \"to\": \"patient@example.com\",\n  \"subject\": \"Test from the API\",\n  \"text\": \"It works.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "202 Accepted: se ha aceptado el envio, no se confirma la entrega.\n502 si Resend rechaza la peticion."
+            "description": "202 Accepted: the email was accepted for sending, delivery is not confirmed.\n502 'Could not send email' if Resend rejects the request."
           },
           "event": [
             {
@@ -629,7 +629,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 202\", function () {",
+                  "pm.test(\"Responds 202\", function () {",
                   "  pm.response.to.have.status(202);",
                   "});"
                 ]
@@ -638,7 +638,7 @@
           ]
         },
         {
-          "name": "Enviar con datos invalidos",
+          "name": "Send with invalid data",
           "request": {
             "method": "POST",
             "header": [
@@ -658,7 +658,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"to\": \"no-es-un-email\",\n  \"subject\": \"x\",\n  \"text\": \"y\"\n}",
+              "raw": "{\n  \"to\": \"not-an-email\",\n  \"subject\": \"x\",\n  \"text\": \"y\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -672,7 +672,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 400\", function () {",
+                  "pm.test(\"Responds 400\", function () {",
                   "  pm.response.to.have.status(400);",
                   "});"
                 ]
@@ -683,10 +683,10 @@
       ]
     },
     {
-      "name": "Seguridad",
+      "name": "Security",
       "item": [
         {
-          "name": "Sin token",
+          "name": "No token",
           "request": {
             "method": "GET",
             "header": [],
@@ -702,7 +702,7 @@
             "auth": {
               "type": "noauth"
             },
-            "description": "401 'Token no proporcionado'. No llega al controller."
+            "description": "401 'Token not provided'. It never reaches the controller."
           },
           "event": [
             {
@@ -710,7 +710,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 401\", function () {",
+                  "pm.test(\"Responds 401\", function () {",
                   "  pm.response.to.have.status(401);",
                   "});"
                 ]
@@ -719,13 +719,13 @@
           ]
         },
         {
-          "name": "Token invalido",
+          "name": "Invalid token",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer basura"
+                "value": "Bearer garbage"
               }
             ],
             "url": {
@@ -740,7 +740,7 @@
             "auth": {
               "type": "noauth"
             },
-            "description": "Anade a mano la cabecera Authorization: Bearer basura.\nEn los logs sale como WARN, no como ERROR."
+            "description": "Manually adds the header Authorization: Bearer garbage.\n401 'Invalid or expired token'. It shows up in the logs as WARN, not ERROR."
           },
           "event": [
             {
@@ -748,7 +748,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Responde 401\", function () {",
+                  "pm.test(\"Responds 401\", function () {",
                   "  pm.response.to.have.status(401);",
                   "});"
                 ]

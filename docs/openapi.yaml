@@ -4,52 +4,61 @@ info:
   title: Clinica API
   version: 1.0.0
   description: |
-    API de gestión de pacientes y citas médicas.
+    API for managing the patients and appointments of a physiotherapy clinic's agenda.
 
-    Autenticación por JWT (Bearer). El token se obtiene en `POST /auth/login`
-    y caduca a la hora.
+    Authentication uses JWT (Bearer). The token is obtained from `POST /auth/login`
+    and expires after one hour.
 
-    Todas las respuestas de error tienen la misma forma: `{ "error": "mensaje" }`.
+    Every error response has the same shape: `{ "error": "message" }`.
+
+    Every route except `/docs` goes through a general rate limiter: 100 requests
+    per IP every 15 minutes. `/auth/register` and `/auth/login` also have a
+    stricter limiter (see each endpoint).
+
+    A request body that is not valid JSON is rejected by the global error
+    handler with `500 { "error": "Internal server error" }`.
 
 servers:
   - url: http://localhost:3000
     description: Local
 
-# Seguridad por defecto para TODA la API.
-# Los endpoints públicos la anulan con `security: []`.
-# Es lo mismo que en Postman: auth a nivel de colección + "No Auth" donde no toca.
+# Default security for the WHOLE API.
+# Public endpoints override it with `security: []`.
+# Same idea as in Postman: auth at collection level + "No Auth" where it does not apply.
 security:
   - bearerAuth: []
 
 tags:
   - name: General
   - name: Auth
-  - name: Pacientes
-  - name: Citas
-  - name: Correo
+  - name: Patients
+  - name: Appointments
+  - name: Email
 
 paths:
   # ─────────────────────────────────────────────────────────────
   /:
     get:
       tags: [General]
-      summary: Comprobación de que la API responde
-      security: [] # público
+      summary: Check that the API is up
+      security: [] # public
       responses:
         "200":
-          description: La API está viva
+          description: The API is alive
           content:
             text/plain:
               schema:
                 type: string
-                example: Bienvenido a Clinica API
+                example: Welcome to Clinica API
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
 
   # ───────────────────────────── AUTH ──────────────────────────
   /auth/register:
     post:
       tags: [Auth]
-      summary: Registrar un usuario
-      security: [] # público
+      summary: Register a user
+      security: [] # public
       requestBody:
         required: true
         content:
@@ -58,27 +67,35 @@ paths:
               $ref: "#/components/schemas/RegisterInput"
       responses:
         "201":
-          description: Usuario creado
+          description: User created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserView"
         "409":
-          description: El email ya está registrado
+          description: The email is already registered
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                error: Email is already registered
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error registering user
 
   /auth/login:
     post:
       tags: [Auth]
-      summary: Iniciar sesión y obtener un token
-      security: [] # público
+      summary: Log in and get a token
+      security: [] # public
       requestBody:
         required: true
         content:
@@ -87,35 +104,44 @@ paths:
               $ref: "#/components/schemas/LoginInput"
       responses:
         "200":
-          description: Token generado
+          description: Token issued
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/LoginResult"
         "401":
           description: |
-            Credenciales incorrectas.
+            Invalid credentials.
 
-            Se devuelve el mismo 401 tanto si el email no existe como si la
-            contraseña es incorrecta, para no revelar qué correos están
-            registrados.
+            The same 401 is returned whether the email does not exist or the
+            password is wrong, so the API does not reveal which emails are
+            registered.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                error: Invalid credentials
         "429":
           $ref: "#/components/responses/TooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error logging in
 
-  # ─────────────────────────── PACIENTES ───────────────────────
+  # ─────────────────────────── PATIENTS ────────────────────────
   /patients:
     get:
-      tags: [Pacientes]
-      summary: Listar pacientes
+      tags: [Patients]
+      summary: List patients
+      description: Returns only the patients owned by the authenticated user.
       responses:
         "200":
-          description: Lista de pacientes
+          description: List of patients
           content:
             application/json:
               schema:
@@ -124,12 +150,21 @@ paths:
                   $ref: "#/components/schemas/Patient"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Server error
 
     post:
-      tags: [Pacientes]
-      summary: Crear un paciente
+      tags: [Patients]
+      summary: Create a patient
+      description: The new patient is owned by the authenticated user.
       requestBody:
         required: true
         content:
@@ -138,7 +173,7 @@ paths:
               $ref: "#/components/schemas/CreatePatientInput"
       responses:
         "201":
-          description: Paciente creado
+          description: Patient created
           content:
             application/json:
               schema:
@@ -147,20 +182,28 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error creating patient
 
   /patients/{id}:
-    # Los parámetros de ruta declarados aquí valen para los tres métodos.
+    # Path parameters declared here apply to all three methods.
     parameters:
       - $ref: "#/components/parameters/IdParam"
 
     get:
-      tags: [Pacientes]
-      summary: Obtener un paciente por id
+      tags: [Patients]
+      summary: Get a patient by id
       responses:
         "200":
-          description: Paciente encontrado
+          description: Patient found
           content:
             application/json:
               schema:
@@ -170,18 +213,34 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
-          $ref: "#/components/responses/Forbidden"
+          description: The patient belongs to another user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: You do not have permission to view this patient
         "404":
-          $ref: "#/components/responses/NotFound"
+          $ref: "#/components/responses/PatientNotFound"
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error getting patient
 
     patch:
-      tags: [Pacientes]
-      summary: Actualizar parcialmente un paciente
+      tags: [Patients]
+      summary: Partially update a patient
       description: |
-        Actualización parcial: solo se modifican los campos enviados.
-        Devuelve el paciente completo ya actualizado.
+        Partial update: only the fields sent are changed.
+        Returns the updated patient. This response does not include `owner_id`.
+
+        The body is validated before the id is checked.
       requestBody:
         required: true
         content:
@@ -190,67 +249,95 @@ paths:
               $ref: "#/components/schemas/UpdatePatientInput"
       responses:
         "200":
-          description: Paciente actualizado
+          description: Patient updated (without `owner_id`)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Patient"
         "400":
           description: |
-            Petición inválida. Tres causas posibles: el id no es un número,
-            el body no trae ningún campo, o un campo enviado tiene un tipo
-            incorrecto.
+            Bad request. Three possible causes: the body has none of the
+            fields, a field has the wrong type, or the id is not a number.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
               examples:
-                idNoNumerico:
-                  summary: El id no es un número
+                emptyBody:
+                  summary: No field was sent
                   value:
-                    error: El id debe ser un número
-                bodyVacio:
-                  summary: No se ha enviado ningún campo
+                    error: Field is empty
+                wrongType:
+                  summary: A field has the wrong type
                   value:
-                    error: El campo está vacío
-                tipoIncorrecto:
-                  summary: Un campo tiene el tipo equivocado
+                    error: Invalid data
+                nonNumericId:
+                  summary: The id is not a number
                   value:
-                    error: Datos inválidos
+                    error: Id must be a number
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
-          $ref: "#/components/responses/Forbidden"
+          description: The patient belongs to another user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: You do not have permission to update this patient
         "404":
-          $ref: "#/components/responses/NotFound"
+          $ref: "#/components/responses/PatientNotFound"
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error updating patient
 
     delete:
-      tags: [Pacientes]
-      summary: Eliminar un paciente
+      tags: [Patients]
+      summary: Delete a patient
+      description: Also deletes the patient's appointments (ON DELETE CASCADE).
       responses:
         "204":
-          description: Eliminado. Sin cuerpo de respuesta.
+          description: Deleted. No response body.
         "400":
           $ref: "#/components/responses/InvalidId"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
-          $ref: "#/components/responses/Forbidden"
+          description: The patient belongs to another user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: You do not have permission to delete this patient
         "404":
-          $ref: "#/components/responses/NotFound"
+          $ref: "#/components/responses/PatientNotFound"
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error deleting patient
 
-  # ───────────────────────────── CITAS ─────────────────────────
+  # ───────────────────────── APPOINTMENTS ──────────────────────
   /appointments:
     get:
-      tags: [Citas]
-      summary: Listar citas
+      tags: [Appointments]
+      summary: List appointments
       responses:
         "200":
-          description: Lista de citas
+          description: List of appointments
           content:
             application/json:
               schema:
@@ -259,12 +346,24 @@ paths:
                   $ref: "#/components/schemas/Appointment"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error getting appointments
 
     post:
-      tags: [Citas]
-      summary: Crear una cita
+      tags: [Appointments]
+      summary: Create an appointment
+      description: |
+        The body is not validated by the API: a missing field or a
+        `patient_id` that does not exist is rejected by the database and
+        answered with a 500.
       requestBody:
         required: true
         content:
@@ -273,26 +372,34 @@ paths:
               $ref: "#/components/schemas/CreateAppointmentInput"
       responses:
         "201":
-          description: Cita creada
+          description: Appointment created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Appointment"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error creating appointment
 
   /appointments/{id}:
     parameters:
       - $ref: "#/components/parameters/IdParam"
 
     get:
-      tags: [Citas]
-      summary: Obtener una cita por id
+      tags: [Appointments]
+      summary: Get an appointment by id
       responses:
         "200":
-          description: Cita encontrada
+          description: Appointment found
           content:
             application/json:
               schema:
@@ -302,13 +409,22 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
-          $ref: "#/components/responses/NotFound"
+          $ref: "#/components/responses/AppointmentNotFound"
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error getting appointment
 
     patch:
-      tags: [Citas]
-      summary: Actualizar parcialmente una cita
+      tags: [Appointments]
+      summary: Partially update an appointment
+      description: "Partial update: only the fields sent are changed."
       requestBody:
         required: true
         content:
@@ -317,7 +433,7 @@ paths:
               $ref: "#/components/schemas/UpdateAppointmentInput"
       responses:
         "200":
-          description: Cita actualizada
+          description: Appointment updated
           content:
             application/json:
               schema:
@@ -327,35 +443,51 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
-          $ref: "#/components/responses/NotFound"
+          $ref: "#/components/responses/AppointmentNotFound"
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error updating appointment
 
     delete:
-      tags: [Citas]
-      summary: Eliminar una cita
+      tags: [Appointments]
+      summary: Delete an appointment
       responses:
         "204":
-          description: Eliminada. Sin cuerpo de respuesta.
+          description: Deleted. No response body.
         "400":
           $ref: "#/components/responses/InvalidId"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
-          $ref: "#/components/responses/NotFound"
+          $ref: "#/components/responses/AppointmentNotFound"
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error deleting appointment
 
-  # ───────────────────────────── CORREO ────────────────────────
+  # ───────────────────────────── EMAIL ─────────────────────────
   /emails:
     post:
-      tags: [Correo]
-      summary: Enviar un correo
+      tags: [Email]
+      summary: Send an email
       description: |
-        Envía un correo a través de Resend.
+        Sends an email through Resend.
 
-        Devuelve **202** y no 201: cuando Resend responde, el correo está
-        encolado, no entregado. No se puede prometer la entrega.
+        Returns **202**, not 201: when Resend answers, the email is queued,
+        not delivered. Delivery cannot be guaranteed.
       requestBody:
         required: true
         content:
@@ -364,30 +496,59 @@ paths:
               $ref: "#/components/schemas/SendEmailInput"
       responses:
         "202":
-          description: Correo aceptado para envío
+          description: Email accepted for delivery
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SendEmailResult"
         "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "502":
           description: |
-            El proveedor de correo rechazó el envío.
-
-            502 y no 500: el fallo está en un servicio del que dependemos,
-            no en esta API.
+            Bad request. Three possible causes: a field is missing or is not
+            a string, a field is empty, or the recipient has no `@`.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              examples:
+                wrongType:
+                  summary: A field is missing or is not a string
+                  value:
+                    error: Invalid data
+                emptyField:
+                  summary: A field is empty or only whitespace
+                  value:
+                    error: Fields cannot be empty
+                invalidRecipient:
+                  summary: The recipient is not an email
+                  value:
+                    error: Recipient is not a valid email
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/GeneralTooManyRequests"
+        "502":
+          description: |
+            The email provider rejected the message.
+
+            502, not 500: the failure is in a service this API depends on,
+            not in this API.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Could not send email
         "500":
-          $ref: "#/components/responses/ServerError"
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Error sending email
 
 # ═════════════════════════════════════════════════════════════════
-# Piezas reutilizables. Se definen una vez y se apuntan con $ref.
+# Reusable pieces. Defined once and referenced with $ref.
 # ═════════════════════════════════════════════════════════════════
 components:
   securitySchemes:
@@ -395,73 +556,91 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Token obtenido en `POST /auth/login`. Caduca a la hora.
+      description: Token obtained from `POST /auth/login`. Expires after one hour.
 
   parameters:
     IdParam:
       name: id
       in: path
       required: true
-      description: Identificador numérico del recurso
+      description: Numeric identifier of the resource
       schema:
         type: integer
       example: 1
 
-  # Respuestas de error que se repiten en casi todos los endpoints.
+  # Error responses shared by several endpoints.
   responses:
     BadRequest:
-      description: Datos de entrada inválidos
+      description: Invalid input data
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
           example:
-            error: Datos inválidos
+            error: Invalid data
 
     InvalidId:
-      description: El id no es un número
+      description: The id is not a number
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
           example:
-            error: El id debe ser un número
+            error: Id must be a number
 
     Unauthorized:
-      description: Token ausente, inválido o caducado
+      description: Missing, invalid or expired token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            missingToken:
+              summary: "No `Authorization: Bearer <token>` header"
+              value:
+                error: Token not provided
+            invalidToken:
+              summary: The token is invalid or has expired
+              value:
+                error: Invalid or expired token
+
+    PatientNotFound:
+      description: The patient does not exist
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
           example:
-            error: Token no proporcionado
-    Forbidden:
-      description: No tienes permiso sobre este recurso
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/Error"
+            error: Patient not found
 
-    NotFound:
-      description: El recurso no existe
+    AppointmentNotFound:
+      description: The appointment does not exist
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+          example:
+            error: Appointment not found
 
     TooManyRequests:
-      description: Límite de intentos alcanzado. Ventana de 15 minutos.
+      description: |
+        Too many failed attempts: 5 per IP in a 15-minute window. Only failed
+        requests (status 400 or higher) count.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+          example:
+            error: Too many attempts. Please try again in 15 minutes.
 
-    ServerError:
-      description: Error interno
+    GeneralTooManyRequests:
+      description: "General rate limit reached: 100 requests per IP in a 15-minute window."
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+          example:
+            error: Too many requests. Please try again later.
 
   schemas:
     Error:
@@ -469,9 +648,9 @@ components:
       properties:
         error:
           type: string
-          example: Mensaje de error
+          example: Invalid data
 
-    # ── Pacientes ──
+    # ── Patients ──
     Patient:
       type: object
       properties:
@@ -480,32 +659,41 @@ components:
           example: 1
         name:
           type: string
-          example: Ana Ruiz
+          example: Marta Sánchez
         age:
           type: integer
           example: 34
         diagnosis:
           type: string
           nullable: true
-          example: Gripe
+          example: Low back pain
+        owner_id:
+          type: integer
+          nullable: true
+          description: |
+            Id of the user who owns the patient. Not included in the
+            `PATCH /patients/{id}` response.
+          example: 1
 
     CreatePatientInput:
       type: object
-      required: [name, age] # diagnosis es opcional
+      required: [name, age] # diagnosis is optional
       properties:
         name:
           type: string
-          example: Ana Ruiz
+          example: Marta Sánchez
         age:
           type: integer
           example: 34
         diagnosis:
           type: string
-          example: Gripe
+          example: Low back pain
 
     UpdatePatientInput:
       type: object
-      description: Todos los campos son opcionales. Se envían solo los que cambian.
+      description: |
+        All fields are optional, but at least one is required. Send only the
+        fields that change.
       properties:
         name:
           type: string
@@ -513,9 +701,9 @@ components:
           type: integer
         diagnosis:
           type: string
-          example: Alta
+          example: Discharged
 
-    # ── Citas ──
+    # ── Appointments ──
     Appointment:
       type: object
       properties:
@@ -532,7 +720,7 @@ components:
         reason:
           type: string
           nullable: true
-          example: Revisión
+          example: Physiotherapy session
 
     CreateAppointmentInput:
       type: object
@@ -547,7 +735,7 @@ components:
           example: "2026-09-15T10:30:00Z"
         reason:
           type: string
-          example: Revisión
+          example: Physiotherapy session
 
     UpdateAppointmentInput:
       type: object
@@ -573,7 +761,7 @@ components:
           example: Example123
         name:
           type: string
-          example: Usuario Demo
+          example: Demo User
 
     LoginInput:
       type: object
@@ -590,7 +778,7 @@ components:
 
     UserView:
       type: object
-      description: Vista pública de un usuario. Nunca incluye el hash de la contraseña.
+      description: Public view of a user. Never includes the password hash.
       properties:
         id:
           type: integer
@@ -600,19 +788,19 @@ components:
           example: demo@example.com
         name:
           type: string
-          example: Usuario Demo
+          example: Demo User
 
     LoginResult:
       type: object
       properties:
         token:
           type: string
-          description: JWT. Caduca a la hora.
+          description: JWT. Expires after one hour.
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         user:
           $ref: "#/components/schemas/UserView"
 
-    # ── Correo ──
+    # ── Email ──
     SendEmailInput:
       type: object
       required: [to, subject, text]
@@ -620,18 +808,19 @@ components:
         to:
           type: string
           format: email
-          example: destinatario@ejemplo.com
+          description: The API only checks that it contains an `@`.
+          example: patient@example.com
         subject:
           type: string
-          example: Recordatorio de cita
+          example: Appointment reminder
         text:
           type: string
-          example: Le recordamos su cita del 15 de septiembre a las 10:30.
+          example: This is a reminder of your physiotherapy session on 15 September at 10:30.
 
     SendEmailResult:
       type: object
       properties:
         id:
           type: string
-          description: Identificador que devuelve el proveedor de correo
+          description: Identifier returned by the email provider
           example: 4ef9bc1a-0f3e-4c2b-9d81-2f5a7c3e1b64
