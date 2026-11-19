@@ -1,200 +1,210 @@
-# Puntos a reforzar
+# Things to reinforce
 
-Cosas prioritarias detectadas trabajando en el proyecto, escritas para que las
-tengas a mano y no dependan de acordarte. No es una lista de deberes: es el
-diagnóstico de dónde está el desfase entre lo que construyes y lo que entiendes.
+Priority topics spotted while working on the project, written down so you
+have them at hand and don't depend on remembering them. It isn't a homework
+list: it's a diagnosis of where the gap is between what you build and what you
+understand.
 
-Origen: sesión del 10/09/2026 (base de test, happy paths y primeros edge cases).
+Source: session of 10/09/2026 (test database, happy paths and first edge cases).
 
 ---
 
-## 1. La prioridad número uno: JavaScript base
+## 1. Priority number one: JavaScript fundamentals
 
-El proyecto va por delante de los fundamentos. Eso es normal aprendiendo en el
-trabajo, pero tiene un riesgo concreto: el repo abre puertas y los fundamentosgit add docs/ && git commit -m "docs: add reinforcement notes"
-deciden si entras.
+The project is ahead of the fundamentals. That's normal when you're learning
+while building a real project, but it carries a specific risk: the repo opens
+doors, and the fundamentals decide whether you get in.
 
-Lo que hay que asentar, por orden:
+What needs to settle, in order:
 
-**Promesas y `async` / `await`.** Media sesión costó fijar esto. Lo esencial:
+**Promises and `async` / `await`.** Half a session went into nailing this down.
+The essentials:
 
-- Toda función marcada `async` devuelve una Promesa. Siempre, aunque escribas
+- Every function marked `async` returns a Promise. Always, even if you write
   `return 5`.
-- La Promesa es el resguardo, no el abrigo. `await` es ir al mostrador a
-  recogerlo.
-- **Sin `await` la acción se ejecuta igual.** Lo que pierdes no es la acción: es
-  esperar el resultado, enterarte de lo que devolvió, y enterarte si falló.
-- Una Promesa sin recoger (_floating promise_) es un objeto, y cualquier objeto
-  es _truthy_. Un `if` sobre ella entra siempre. Fallo silencioso.
+- The Promise is the cloakroom ticket, not the coat. `await` is going to the
+  counter to pick it up.
+- **Without `await` the action still runs.** What you lose isn't the action:
+  it's waiting for the result, finding out what it returned, and finding out if
+  it failed.
+- A Promise nobody picks up (_floating promise_) is an object, and every object
+  is _truthy_. An `if` on it always goes in. A silent failure.
 
-**El bucle de eventos.** Por qué "esperar" en una función no congela el
-servidor. Sin esto, `async` en Node siempre será magia.
+**The event loop.** Why "waiting" inside a function doesn't freeze the server.
+Without this, `async` in Node will always feel like magic.
 
-**Y después:** closures, `this`, `undefined` vs `null`, `===` vs `==`.
+**And after that:** closures, `this`, `undefined` vs `null`, `===` vs `==`.
 
-Lectura: MDN, guía de "Usar promesas". Un rato corto y constante, aparte del
-proyecto.
-
----
-
-## 2. Tres patrones de error que se repitieron
-
-No son despistes sueltos; son hábitos, y por eso se pueden corregir.
-
-### 2.1. Copiar un assert sin traducir la intención
-
-Pasó tres veces en la misma sesión:
-
-- En el 403 del `GET` se afirmó `toHaveProperty("id")` — o sea, que la respuesta
-  traía los datos del paciente ajeno. Eso es un agujero de seguridad, y el test
-  lo estaba celebrando.
-- En el 403 del `PATCH` se afirmó que el body traía `"recuperado"` — o sea, que
-  el intruso había conseguido modificarlo.
-- En el mismo test se afirmó `rowCount === 0`, copiado del `DELETE`, cuando un
-  `PATCH` no borra nada y esa fila siempre está.
-
-**En un test de denegación, casi todos los asserts van al revés que en el happy
-path del que los copias.**
-
-Regla práctica: antes de dar por bueno un `expect`, léelo traducido al español
-en voz alta. "Afirmo que el cambio se aplicó" — ¿es eso lo que quieres probar?
-Diez segundos.
-
-### 2.2. Cadenas de texto mal escritas
-
-`/Authorization` con barra, `Autorization` sin hache. Dos veces el mismo día.
-
-El problema es que **TypeScript no protege las cadenas de texto**. Un nombre de
-cabecera es un `string` que construyes tú; el compilador no sabe si está bien
-escrito. Y el síntoma engaña: la cabecera no se encuentra, no hay token, y
-recibes un **401** cuando esperabas otra cosa.
-
-Regla: si un test de autorización devuelve 401 sin motivo, lo primero que se
-mira es cómo está escrita esa palabra.
-
-### 2.3. Razonar bien y luego hacer lo contrario
-
-En el test del 404 la pregunta era si hacía falta preparar datos. La respuesta
-fue correcta: "no, porque el `beforeEach` ya borra todo". Y acto seguido se
-insertaron un usuario y un paciente.
-
-Fíate de tu propio razonamiento. Si has llegado a una conclusión y la escribes,
-sostenla.
+Reading: MDN, the "Using promises" guide. A short, steady slot of time, separate
+from the project.
 
 ---
 
-## 3. Conceptos que conviene repasar
+## 2. Three error patterns that kept coming back
 
-**Los tipos desaparecen al compilar.** En `dist/` no queda ni rastro de un
-`type`. Por eso un tipo **no valida** lo que llega en `req.body` — para eso está
-el middleware de validación. Y por eso el test que comprueba que la API no
-devuelve `password_hash` es lo único que protege esa promesa en runtime, no el
-tipo `UserView`.
+They aren't one-off slips; they're habits, and that's why they can be fixed.
 
-**Tabla no es lo mismo que base de datos.** `owner_id` apunta a la tabla `users`,
-que vive en la **misma** base. Eso es una clave foránea.
+### 2.1. Copying an assert without translating the intent
 
-**Constraints.** Reglas que hace cumplir la propia base, venga quien venga:
-`PRIMARY KEY`, `UNIQUE`, `FOREIGN KEY`. Se leen por el nombre —
-`patients_owner_id_fkey` es tabla, columna y tipo. Validar en el código protege
-solo el camino que pasa por tu API; la constraint protege el dato siempre.
+It happened three times in the same session:
 
-**El resultado de `pool.query`.** `rowCount` es un número: cuántas filas.
-`rows` es un array con el contenido, y cada posición es un objeto cuyas claves
-son los nombres de las columnas. Contar filas no es lo mismo que mirar dentro.
+- In the `GET`'s 403 test, the assert was `toHaveProperty("id")` — in other
+  words, that the response included the other doctor's patient data. That's a
+  security hole, and the test was celebrating it.
+- In the `PATCH`'s 403 test, the assert was that the body contained
+  `"recovered"` — in other words, that the intruder had managed to change it.
+- In the same test, the assert was `rowCount === 0`, copied from the `DELETE`,
+  when a `PATCH` doesn't delete anything and that row is always there.
 
-**Leer el error entero.** `WHERRE` con dos erres, un `fkey` que decía
-exactamente qué columna apuntaba a un usuario inexistente. El mensaje casi
-siempre señala el sitio con el dedo.
+**In a denial test, almost every assert goes the opposite way from the happy
+path you copied it from.**
+
+Practical rule: before accepting an `expect`, read it out loud in plain English.
+"I assert that the change was applied" — is that what you want to test? Ten
+seconds.
+
+### 2.2. Misspelled strings
+
+`/Authorization` with a slash, `Autorization` without the h. Twice on the same
+day.
+
+The problem is that **TypeScript doesn't protect strings**. A header name is a
+`string` you build yourself; the compiler doesn't know whether it's spelled
+right. And the symptom is misleading: the header isn't found, there's no token,
+and you get a **401** when you expected something else.
+
+Rule: if an authorization test returns a 401 for no reason, the first thing to
+check is how that word is spelled.
+
+### 2.3. Reasoning correctly and then doing the opposite
+
+In the 404 test the question was whether any data needed to be set up. The
+answer was right: "no, because the `beforeEach` already wipes everything". And
+right after that, a user and a patient were inserted.
+
+Trust your own reasoning. If you've reached a conclusion and written it down,
+stick to it.
 
 ---
 
-## 4. Dos familias de rojo
+## 3. Concepts worth reviewing
 
-Saber distinguirlas ahorra horas.
+**Types disappear when you compile.** Not a trace of a `type` is left in
+`dist/`. That's why a type **doesn't validate** what arrives in `req.body` —
+that's what the validation middleware is for. And that's why the test that
+checks the API never returns `password_hash` is the only thing protecting that
+promise at runtime, not the `UserView` type.
 
-**Falla un assert:**
+**A table is not the same as a database.** `owner_id` points to the `users`
+table, which lives in the **same** database. That's a foreign key.
+
+**Constraints.** Rules the database itself enforces, no matter who's asking:
+`PRIMARY KEY`, `UNIQUE`, `FOREIGN KEY`. You can read them by their name —
+`patients_owner_id_fkey` is table, column and type. Validating in the code only
+protects the path that goes through your API; the constraint always protects
+the data.
+
+**The result of `pool.query`.** `rowCount` is a number: how many rows. `rows` is
+an array with the content, and each item is an object whose keys are the column
+names. Counting rows isn't the same as looking inside them.
+
+**Read the whole error.** `WHERRE` with two r's, an `fkey` that said exactly
+which column pointed to a user that didn't exist. The message almost always
+points right at the spot.
+
+---
+
+## 4. Two families of red
+
+Telling them apart saves hours.
+
+**An assert fails:**
 
 ```
 Expected: 404
 Received: 401
 ```
 
-El código llegó al final y devolvió otra cosa. **Hay un bug tuyo.**
+The code reached the end and returned something else. **There's a bug in your
+code.**
 
-**Algo revienta:**
+**Something blows up:**
 
 ```
 error: deadlock detected
 error: duplicate key value violates unique constraint
 ```
 
-Es una excepción: el test ni llegó a comprobar nada. Puede ser tu código — o el
-entorno.
+It's an exception: the test didn't even get to check anything. It could be your
+code — or the environment.
 
-Tres señales de que es el entorno y no tú:
+Three signs that it's the environment and not you:
 
-1. Fallan tests que no has tocado.
-2. Pasaban hace veinte minutos con el mismo código.
-3. El error habla el idioma de la base de datos o de la red, no el de tu
-   dominio.
+1. Tests you haven't touched are failing.
+2. They were passing twenty minutes ago with the same code.
+3. The error speaks the language of the database or the network, not the
+   language of your domain.
 
-**Regla: cuando falla algo que no has tocado, no busques en lo que sí has
-tocado. Busca qué ha cambiado alrededor.**
-
----
-
-## 5. Cosas de proyecto real que ya has tocado
-
-No son teoría: te pasaron.
-
-**Estado compartido y concurrencia.** Toda la suite comparte una sola base y
-asume que nadie más la toca. La extensión de Jest de VS Code corría en segundo
-plano con `--watch` y truncaba e insertaba a la vez: deadlocks y claves
-duplicadas. La solución de fondo es aislar cada test — transacciones con
-`ROLLBACK`, o una base por proceso.
-
-**Tests _flaky_.** Un test que falla una de cada diez veces es peor que uno que
-falla siempre: el equipo aprende a relanzarlo, y el día que detecte un bug real
-nadie le hará caso. Con un flaky, **una pasada en verde no demuestra nada**:
-verificar es lanzar diez veces.
-
-**`push` no fusiona.** `push` sube lo que tu rama local ya tiene; el que trae
-commits de otra rama es `merge`. Saltarse el merge y hacer push da un mensaje de
-éxito perfectamente válido que no lleva nada del trabajo nuevo. Ya pasó.
-
-**`.git/index.lock`.** Es el cartel de "ocupado" que Git pone antes de escribir
-en el índice. Si el proceso muere sin quitarlo, bloquea todo. Se borra, pero
-solo tras comprobar que no hay ningún Git vivo de verdad.
-
-**La rama decide qué ves.** Estar en `main` mirando un archivo y creer que se ha
-perdido trabajo que está commiteado en otra rama. Mirar en qué rama estás antes
-de sacar conclusiones.
+**Rule: when something you haven't touched fails, don't search in what you did
+touch. Look for what changed around it.**
 
 ---
 
-## 6. Orden sugerido
+## 5. Real-project things you've already run into
 
-1. **JavaScript base**, fuera del proyecto y a diario. Es la inversión con más
-   retorno.
-2. **SQL de verdad**: joins, índices, `EXPLAIN`, transacciones. La base de datos
-   es la herramienta principal de un backend.
-3. **Leer errores despacio** antes de tocar nada.
-4. Y seguir construyendo, que es lo que funciona.
+This isn't theory: it happened to you.
+
+**Shared state and concurrency.** The whole suite shares a single database and
+assumes nobody else is touching it. The VS Code Jest extension was running in
+the background with `--watch` and truncating and inserting at the same time:
+deadlocks and duplicate keys. The real fix is to isolate each test —
+transactions with `ROLLBACK`, or one database per process.
+
+**_Flaky_ tests.** A test that fails one time in ten is worse than one that
+always fails: people learn to just rerun it, and the day it catches a real bug
+nobody will pay attention. With a flaky test, **one green run proves nothing**:
+verifying means running it ten times.
+
+**`push` doesn't merge.** `push` uploads what your local branch already has;
+the one that brings in commits from another branch is `merge`. Skipping the
+merge and pushing gives a perfectly valid success message that carries none of
+the new work. It already happened.
+
+**`.git/index.lock`.** It's the "busy" sign Git puts up before writing to the
+index. If the process dies without removing it, it blocks everything. You can
+delete it, but only after checking that no Git process is really still running.
+
+**The branch decides what you see.** Being on `main`, looking at a file, and
+thinking work was lost when it's committed on another branch. Check which branch
+you're on before drawing conclusions.
 
 ---
 
-## 7. Deuda técnica pendiente en el proyecto
+## 6. Suggested order
 
-Apuntada para no perderla:
+1. **JavaScript fundamentals**, outside the project and every day. It's the
+   investment with the highest return.
+2. **Real SQL**: joins, indexes, `EXPLAIN`, transactions. The database is a
+   backend's main tool.
+3. **Read errors slowly** before touching anything.
+4. And keep building, because that's what works.
 
-- Fixtures duplicados: el mismo bloque de `INSERT` repetido en muchos tests.
-  Toca extraerlo a _factories_ cuando estén cerrados los edge cases.
-- Aislamiento de tests: sustituir `TRUNCATE` por transacciones con `ROLLBACK`.
-- Cobertura: medir qué líneas no toca ningún test.
-- CI con GitHub Actions: lanzar la gate en cada push.
-- Paginación en `GET /patients` e índice en `owner_id`. Se aprecian de verdad
-  con datos de volumen (script de _seeding_ con faker).
-- `patient.service.ts`: la variable `owner_Id` con I mayúscula.
-- El `RETURNING` del `update` en el repositorio no devuelve `owner_id`, a
-  diferencia del `create`.
+---
+
+## 7. Pending technical debt in the project
+
+Written down so it doesn't get lost:
+
+- Duplicated fixtures: the same `INSERT` block repeated in many tests. Extract
+  them into _factories_ once the edge cases are done. _(Done: `test/builders.ts`
+  and `test/integration/db.ts`.)_
+- Test isolation: replace `TRUNCATE` with transactions and `ROLLBACK`.
+- Coverage: measure which lines no test touches. _(Done: `npm run
+test:coverage`.)_
+- CI with GitHub Actions: run the gate on every push. _(Done:
+  `.github/workflows/ci.yml`.)_
+- Pagination in `GET /patients` and an index on `owner_id`. You really notice
+  them with large amounts of data (a _seeding_ script with faker).
+- `patient.service.ts`: the variable `owner_Id` with a capital I.
+- The `RETURNING` of the `update` in the repository doesn't return `owner_id`,
+  unlike the `create`.

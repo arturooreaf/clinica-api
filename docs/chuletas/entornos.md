@@ -1,110 +1,116 @@
-# Por qué hemos tocado `.env`, `.env.test` y los happy paths
+# Why we touched `.env`, `.env.test` and the happy paths
 
-> Chuleta de repaso — lo de hoy (09/09/2026), explicado de un tirón.
-> Si en dos semanas no te acuerdas de por qué existe algo de esto, empieza por aquí.
+> Review cheat sheet — today's work (09/09/2026), explained in one go.
+> If in two weeks you can't remember why any of this exists, start here.
+
+> **Update:** the tests are now split into two Jest projects. The **unit**
+> tests mock the repositories and never touch a database (their
+> `DATABASE_URL` points nowhere on purpose). Only the **integration** tests use
+> `clinica_test`, and they refuse to run against a database whose name doesn't
+> end in `_test`. See [tests.md](tests.md).
 
 ---
 
-## El resumen en una frase
+## The summary in one sentence
 
-**Un test que usa la base de datos real es peligroso. Necesitas una base falsa, desechable, solo para tests. Y necesitas decirle a tu app "hoy usa la falsa" sin tocar el código.** Todo lo de hoy es eso, en distintas capas.
+**A test that uses the real database is dangerous. You need a fake, disposable database just for tests. And you need to tell your app "use the fake one today" without touching the code.** Everything we did today is that, in different layers.
 
 ---
 
-## 1. Test = lista de comprobación, no examen
+## 1. A test = a checklist, not an exam
 
-Un **test automático** es código que llama a tu propia API y comprueba la respuesta, en vez de que tú abras Postman cada vez.
+An **automated test** is code that calls your own API and checks the response, instead of you opening Postman every time.
 
-No es para "aprobar un examen una vez". Es para dentro de dos meses, cuando cambies algo y no te acuerdes de qué probar a mano. `npm test` te lo dice en 3 segundos.
+It isn't for "passing an exam once". It's for two months from now, when you change something and can't remember what to test by hand. `npm test` tells you in 3 seconds.
 
 ```
-Analogía: la checklist de un piloto antes de despegar.
-No confía en la memoria. La repite siempre, igual, sin saltarse nada.
+Analogy: a pilot's checklist before takeoff.
+It doesn't trust memory. It runs the same way every time, without skipping anything.
 ```
 
 ---
 
-## 2. Dos tipos de test — y por qué te faltaba uno
+## 2. Two kinds of test — and why you were missing one
 
-| Tipo                          | Qué prueba              | Ejemplo tuyo                               |
-| ----------------------------- | ----------------------- | ------------------------------------------ |
-| **Happy path** (camino feliz) | Todo sale bien          | `POST /patients` con datos correctos → 201 |
-| **Edge case** (caso límite)   | Algo falla, a propósito | `POST /patients` sin token → 401           |
+| Kind           | What it tests               | Your example                           |
+| -------------- | --------------------------- | -------------------------------------- |
+| **Happy path** | Everything goes well        | `POST /patients` with valid data → 201 |
+| **Edge case**  | Something fails, on purpose | `POST /patients` without a token → 401 |
 
-**Tenías 7 de 8 tests que eran edge cases.** No porque lo decidieras tú — porque son los fáciles: un middleware corta la petición _antes_ de llegar a la base de datos, así que no necesitan Postgres encendido para pasar.
+**7 of your 8 tests were edge cases.** Not because you decided so — because they're the easy ones: a middleware stops the request _before_ it reaches the database, so they don't need Postgres running to pass.
 
-Un happy path de verdad (`crear un paciente y comprobar que existe`) **sí** toca la base de datos: escribe una fila y la lee. Y ahí empieza el problema.
+A real happy path (`create a patient and check it exists`) **does** touch the database: it writes a row and reads it. And that's where the problem starts.
 
 ---
 
-## 3. Por qué NO puedes usar tu base de siempre para testear
+## 3. Why you CAN'T test against your usual database
 
-Dos motivos, no uno:
+Two reasons, not one:
 
-**Motivo 1 — se ensucia.**
-Si tu test de "borrar paciente" borra un paciente de verdad, cada `npm test` te destroza los datos que tenías guardados a mano para depurar.
+**Reason 1 — it gets dirty.**
+If your "delete patient" test deletes a real patient, every `npm test` wrecks the data you saved by hand for debugging.
 
-**Motivo 2 — se vuelve un rumor, no una prueba.**
-Un test como _"listar pacientes devuelve la lista"_ pasaría o fallaría según **cuántos pacientes hubiera ese día concreto**. Un test tiene que dar el mismo resultado siempre, si no, no sirve para nada — es ruido, no información.
+**Reason 2 — it becomes a rumour, not a proof.**
+A test like _"listing patients returns the list"_ would pass or fail depending on **how many patients there were that particular day**. A test has to give the same result every time; otherwise it's useless — it's noise, not information.
 
-**La solución:** una base de datos aparte, que se vacía y se rellena de cero en cada test (`TRUNCATE ... CASCADE`, lo que viste en el error). Así el resultado depende solo de tu código, nunca de lo que hubiera guardado antes.
+**The solution:** a separate database that gets emptied and refilled from scratch for every test (`TRUNCATE ... CASCADE`, the one you saw in the error). That way the result depends only on your code, never on whatever was saved before.
 
 ```mermaid
 graph LR
-    A[npm test] --> B[TRUNCATE la base]
-    B --> C[crea datos limpios]
-    C --> D[corre el test]
-    D --> E[resultado 100% predecible]
+    A[npm test] --> B[TRUNCATE the database]
+    B --> C[create clean data]
+    C --> D[run the test]
+    D --> E[100% predictable result]
 ```
 
-Esa base aparte es **`clinica_test`** — mismo Postgres, otra base lógica.
+That separate database is **`clinica_test`** — same Postgres, a different logical database.
 
 ---
 
-## 4. Código vs. configuración (por qué existe `.env`)
+## 4. Code vs. configuration (why `.env` exists)
 
-Regla general, no solo de este proyecto:
+A general rule, not just for this project:
 
-- **Código** = qué hace tu app. Igual en todas partes.
-- **Configuración** = a qué se conecta, con qué claves. Distinto según dónde corra.
+- **Code** = what your app does. The same everywhere.
+- **Configuration** = what it connects to, with which keys. Different depending on where it runs.
 
-`DATABASE_URL` es configuración: la dirección a la que te conectas. No puede estar escrita fija dentro de `pool.ts` (`"conéctate a esta base concreta"`), porque entonces no podrías cambiar de base sin tocar y recompilar código.
+`DATABASE_URL` is configuration: the address you connect to. It can't be hard-coded inside `pool.ts` (`"connect to this specific database"`), because then you couldn't switch databases without changing and recompiling code.
 
-Por eso vive en un archivo `.env`, fuera del código.
+That's why it lives in a `.env` file, outside the code.
 
-Vas a ver esta misma idea otra vez con Render: producción tiene sus propias variables, distintas de tu portátil, **con el mismo código**.
+You'll see this same idea again with Render: production has its own variables, different from your laptop's, **with the same code**.
 
 ---
 
-## 5. La cadena completa de hoy
+## 5. Today's full chain
 
-Este es el mapa que conecta todo lo que has tocado:
+This is the map that connects everything you touched:
 
 ```mermaid
 graph TD
-    A["npm test"] --> B["Jest pone NODE_ENV=test<br/>(él solo, sin que hagas nada)"]
-    B --> C["env.ts lee NODE_ENV"]
+    A["npm test"] --> B["Jest sets NODE_ENV=test<br/>(on its own, you do nothing)"]
+    B --> C["env.ts reads NODE_ENV"]
     C -->|"=== 'test'"| D[".env.test"]
-    C -->|"si no"| E[".env"]
-    D --> F["DATABASE_URL → clinica_test<br/>(base desechable)"]
-    E --> G["DATABASE_URL → clinica_dev<br/>(tu base de desarrollo)"]
+    C -->|"otherwise"| E[".env"]
+    D --> F["DATABASE_URL → clinica_test<br/>(disposable database)"]
+    E --> G["DATABASE_URL → clinica_dev<br/>(your development database)"]
 ```
 
-**Una sola variable (`NODE_ENV`) decide toda la cadena de abajo.** Por eso un solo `console.log` te sirvió para confirmar todo el flujo.
+**A single variable (`NODE_ENV`) decides the whole chain below it.** That's why a single `console.log` was enough to confirm the whole flow.
 
 ---
 
-## 6. Los dos bugs que arreglaste hoy, en una línea cada uno
+## 6. The two bugs you fixed today, one line each
 
-1. **`dotenv.config()` sin argumento siempre carga `.env`.** Había que decirle explícitamente qué archivo cargar con `{ path: archivo }`.
-2. **El host de la `DATABASE_URL` en `.env.test` era `clinica_test`** (el nombre de la base, no el host). Tenía que ser `localhost`, igual que en `.env` — solo cambia el **nombre de la base al final** de la URL, no el host.
+1. **`dotenv.config()` with no argument always loads `.env`.** You had to tell it explicitly which file to load with `{ path: file }`.
+2. **The host in `.env.test`'s `DATABASE_URL` was `clinica_test`** (the database name, not the host). It had to be `localhost`, same as in `.env` — only the **database name at the end** of the URL changes, not the host.
 
 ---
 
-## Para comprobar que lo tienes
+## Check that you've got it
 
-Sin mirar arriba, contesta:
+Without looking above, answer:
 
-1. ¿Por qué un test que borra datos de verdad es un problema, aunque la base sea "solo de pruebas tuyas"?
-2. ¿Qué variable decide si tu app carga `.env` o `.env.test`, y quién la pone en valor `"test"`?
-3. En una URL de conexión (`postgresql://usuario:pass@host:puerto/basedatos`), ¿qué parte te equivocaste al copiar `.env` a `.env.test`?
+1. Why is a test that deletes real data a problem, even if the database is "just your own test data"?
+2. Which variable decides whether your app loads `.env` or `.env.test`, and who sets it to `"test"`?
+3. In a connection URL (`postgresql://user:pass@host:port/database`), which part did you get wrong when copying `.env` to `.env.test`?
