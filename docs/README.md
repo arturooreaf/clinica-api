@@ -1,70 +1,73 @@
-# Documentación del proyecto
+# Project documentation
 
-Índice de toda la documentación. Si no sabes por dónde empezar, empieza aquí.
-
----
-
-## Entender el proyecto
-
-| Documento                            | Para qué                                                                                                                                                                  |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`arquitectura.md`](arquitectura.md) | Las capas, qué hace y qué tiene prohibido cada una, el recorrido completo de una petición, y las preguntas que me pueden hacer en la defensa                              |
-| [`openapi.yaml`](openapi.yaml)       | La especificación de la API. **No mover de aquí:** `src/app.ts` la lee al arrancar con `path.join(__dirname, "../docs/openapi.yaml")`; si no está, el servidor no levanta |
+Index of all the documentation. If you do not know where to start, start
+here.
 
 ---
 
-## Referencia del día a día
+## Understanding the project
 
-| Documento                                          | Para qué                                                                                                        |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| [`referencia/comandos.md`](referencia/comandos.md) | Todos los comandos del proyecto: arranque, calidad, base de datos, Git, dependencias, y qué hacer si algo falla |
-| [`referencia/api.md`](referencia/api.md)           | Guía de uso de los endpoints, con ejemplos de petición y respuesta                                              |
-| [`referencia/pruebas.md`](referencia/pruebas.md)   | Secuencia de pruebas manuales con `curl`                                                                        |
-| [`postman/`](postman/)                             | Colección exportada de Postman. Excluida de Prettier en `.prettierignore`                                       |
+| Document                             | What for                                                                                                                                                                       |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`arquitectura.md`](arquitectura.md) | The layers, what each one does and is forbidden to do, the full journey of a request, and the questions I may be asked about the design                                        |
+| [`openapi.yaml`](openapi.yaml)       | The API specification. **Do not move it:** `src/app.ts` reads it on startup with `path.join(__dirname, "../docs/openapi.yaml")`; if it is not there, the server does not start |
 
 ---
 
-## Chuletas de repaso
+## Day-to-day reference
 
-Notas propias sobre lo que he ido aprendiendo. No son documentación del
-proyecto: son para que no se me olvide.
-
-| Documento                                          | Para qué                                                                       |
-| -------------------------------------------------- | ------------------------------------------------------------------------------ |
-| [`chuletas/tests.md`](chuletas/tests.md)           | Jest, supertest, las dos fases, qué testear y qué no                           |
-| [`chuletas/javascript.md`](chuletas/javascript.md) | Mis puntos débiles de JavaScript base, con el error concreto que dio cada uno  |
-| [`chuletas/entornos.md`](chuletas/entornos.md)     | Por qué existen `.env` y `.env.test`, y la cadena entera hasta la base de test |
+| Document                                           | What for                                                                                                              |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| [`referencia/comandos.md`](referencia/comandos.md) | Every project command: startup, quality checks, tests, database, Git, dependencies, and what to do if something fails |
+| [`referencia/api.md`](referencia/api.md)           | Guide to using the endpoints, with request and response examples                                                      |
+| [`referencia/pruebas.md`](referencia/pruebas.md)   | The automated test suite (Jest) and a manual test sequence with `curl`                                                |
+| [`postman/`](postman/)                             | Exported Postman collection. Excluded from Prettier in `.prettierignore`                                              |
 
 ---
 
-## Estructura de esta carpeta
+## Study notes
+
+My own notes on what I have been learning. They are not project
+documentation: they are so I do not forget.
+
+| Document                                           | What for                                                                        |
+| -------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [`chuletas/tests.md`](chuletas/tests.md)           | Jest, supertest, the two phases, what to test and what not                      |
+| [`chuletas/javascript.md`](chuletas/javascript.md) | My weak spots in core JavaScript, with the specific error each one caused       |
+| [`chuletas/entornos.md`](chuletas/entornos.md)     | Why `.env` and `.env.test` exist, and the whole chain down to the test database |
+
+---
+
+## Layout of this folder
 
 ```
 docs/
-├── README.md              este índice
-├── arquitectura.md        cómo está montado por dentro
-├── openapi.yaml           especificación de la API (NO MOVER)
-├── postman/               colección exportada
-├── referencia/            consulta del día a día
+├── README.md              this index
+├── arquitectura.md        how it is built on the inside
+├── openapi.yaml           API specification (DO NOT MOVE)
+├── postman/               exported collection
+├── referencia/            day-to-day reference
 │   ├── comandos.md
 │   ├── api.md
 │   └── pruebas.md
-└── chuletas/              apuntes de repaso
-    ├── tests.md
-    ├── javascript.md
-    └── entornos.md
+├── chuletas/              study notes
+│   ├── tests.md
+│   ├── javascript.md
+│   └── entornos.md
+└── refuerzo/              areas to strengthen
+    └── README.md
 ```
 
 ---
 
-## Deuda de documentación conocida
+## Known documentation debt
 
-- `referencia/api.md` y `referencia/pruebas.md` se solapan: los dos explican
-  cómo probar los endpoints a mano con `curl`. Habría que fundirlos en uno o
-  dejar claro qué cubre cada uno.
+- `referencia/api.md` and the manual section of `referencia/pruebas.md`
+  overlap: both explain how to try the endpoints by hand with `curl`. They
+  should be merged into one, or each should state clearly what it covers.
 
-## Refuerzo
+## Areas to strengthen
 
-- [`refuerzo/README.md`](refuerzo/README.md) — puntos a reforzar detectados
-  trabajando en el proyecto: fundamentos flojos, patrones de error que se
-  repiten, y la deuda tecnica pendiente.
+- [`refuerzo/README.md`](refuerzo/README.md) — areas to strengthen found
+  while working on the project: weak fundamentals, recurring error patterns,
+  and pending technical debt.

@@ -1,8 +1,8 @@
-# Comandos del proyecto
+# Project commands
 
-Referencia de todos los comandos necesarios para trabajar en el proyecto.
+Reference for every command needed to work on the project.
 
-Para listar los scripts disponibles en cualquier momento:
+To list the available scripts at any time:
 
 ```bash
 npm run
@@ -10,16 +10,16 @@ npm run
 
 ---
 
-## Arranque diario
+## Daily startup
 
-En este orden.
+In this order.
 
 ```bash
 docker compose up -d
 ```
 
-Levanta PostgreSQL en segundo plano (`-d`). El contenedor se llama
-`clinica-db`. Comprobar que está arriba:
+Starts PostgreSQL in the background (`-d`). The container is called
+`clinica-db`. Check that it is up:
 
 ```bash
 docker ps
@@ -29,12 +29,12 @@ docker ps
 npm run dev
 ```
 
-Arranca la API en `http://localhost:3000` con recarga automática al guardar.
+Starts the API at `http://localhost:3000` with automatic reload on save.
 
-> `tsx` **no comprueba los tipos**: los elimina y ejecuta. La comprobación de
-> tipos es `npm run typecheck`, que es un comando aparte.
+> `tsx` **does not check types**: it strips them and runs the code. Type
+> checking is `npm run typecheck`, which is a separate command.
 
-Al terminar la jornada:
+At the end of the day:
 
 ```bash
 docker compose down
@@ -42,16 +42,16 @@ docker compose down
 
 ---
 
-## Comprobaciones de calidad
+## Quality checks
 
-Los cuatro que deben pasar antes de integrar cualquier rama.
+The four that must pass before merging any branch.
 
-| Comando                | Qué comprueba               | Salida si todo está bien                     |
-| ---------------------- | --------------------------- | -------------------------------------------- |
-| `npm run typecheck`    | los tipos de TypeScript     | sin salida                                   |
-| `npm run lint`         | descuidos y malas prácticas | sin salida                                   |
-| `npm run format:check` | el formato                  | `All matched files use Prettier code style!` |
-| `npm test`             | el comportamiento           | pendiente de implementar                     |
+| Command                | What it checks          | Output if everything is fine                     |
+| ---------------------- | ----------------------- | ------------------------------------------------ |
+| `npm run typecheck`    | TypeScript types        | no output                                        |
+| `npm run lint`         | slips and bad practices | no output                                        |
+| `npm run format:check` | formatting              | `All matched files use Prettier code style!`     |
+| `npm test`             | behaviour               | Jest summary with every test passing (see below) |
 
 ### `npm run typecheck`
 
@@ -59,11 +59,11 @@ Los cuatro que deben pasar antes de integrar cualquier rama.
 npm run typecheck
 ```
 
-Equivale a `tsc --noEmit`: revisa los tipos de los 40 archivos sin generar
-JavaScript. Es la única comprobación de tipos del proyecto, porque `npm run dev`
-no la hace.
+Runs `tsc --noEmit -p tsconfig.test.json`: checks the types of `src/` and
+`test/` without generating JavaScript. It is the only type check in the
+project, because `npm run dev` does not do it.
 
-El editor solo avisa de los archivos abiertos. Este comando revisa todos.
+The editor only warns about open files. This command checks all of them.
 
 ### `npm run lint`
 
@@ -71,170 +71,212 @@ El editor solo avisa de los archivos abiertos. Este comando revisa todos.
 npm run lint
 ```
 
-ESLint sobre `src`. Detecta `console.log` olvidados, variables sin usar y
-patrones problemáticos. **Un aviso de ESLint no impide que el programa
-funcione**: señala lo que no se debe hacer, no lo que está roto.
+ESLint over `src` and `test`. Catches forgotten `console.log` calls, unused
+variables and problematic patterns. **An ESLint warning does not stop the
+program from working**: it points out what should not be done, not what is
+broken.
 
-### `npm run format` y `npm run format:check`
+### `npm run format` and `npm run format:check`
 
 ```bash
-npm run format         # reformatea los archivos
-npm run format:check   # solo informa, no toca nada
+npm run format         # reformats the files
+npm run format:check   # only reports, changes nothing
 ```
 
-El primero se usa en local. El segundo es el que va en integración continua,
-porque falla en lugar de modificar archivos.
+The first one is used locally. The second one is the one that runs in
+continuous integration, because it fails instead of modifying files.
 
-La configuración está en `.prettierrc` y las exclusiones en `.prettierignore`.
-`docs/postman/` está excluido porque lo genera Postman al exportar.
+The configuration is in `.prettierrc` and the exclusions in
+`.prettierignore`. `docs/postman/` is excluded because Postman generates it
+when exporting.
 
 ---
 
-## Base de datos
+## Automated tests
 
-### Aplicar migraciones
+The tests live in `test/` and run as two Jest projects (see
+`jest.config.js`). Full explanation in `docs/referencia/pruebas.md`.
+
+| Command                    | What it runs                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------ |
+| `npm test`                 | both projects: `test:unit` first, then `test:integration`                                        |
+| `npm run test:unit`        | the `unit` project: the whole HTTP app with the repositories mocked, no database needed          |
+| `npm run test:integration` | the `integration` project (`test/integration/`): real SQL against PostgreSQL, one file at a time |
+| `npm run test:watch`       | the `unit` project in watch mode: reruns the affected tests on every save                        |
+| `npm run test:coverage`    | both projects with a coverage report of `src/`                                                   |
+
+The integration tests need the container to be up and a `.env.test` with a
+`DATABASE_URL` whose database name ends in `_test` (they empty every table
+before each test, so they refuse to run against any other database). The
+unit tests need neither Docker nor `.env.test`.
+
+---
+
+## Database
+
+### Apply migrations
 
 ```bash
 npm run migrate up
 ```
 
-Aplica las migraciones pendientes de `src/database/migrations`.
+Applies the pending migrations in `src/database/migrations`.
 
-### Deshacer la última
+### Undo the last one
 
 ```bash
 npm run migrate down
 ```
 
-### Crear una migración nueva
+### Create a new migration
 
 ```bash
-npm run migrate create nombre-de-la-migracion
+npm run migrate create migration-name
 ```
 
-Genera un archivo con marca de tiempo en `src/database/migrations`. El orden de
-ejecución lo determina esa marca de tiempo, no el nombre.
+Generates a timestamped file in `src/database/migrations`. The execution
+order is determined by that timestamp, not by the name.
 
-### Conectarse a la base de datos
+### Connect to the database
 
 ```bash
 docker exec -it clinica-db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
 
-El usuario y la base de datos salen del `.env` a través del `docker-compose.yml`, así
-que se leen de las variables del propio contenedor en lugar de escribirlos a mano.
+The user and the database come from `.env` through `docker-compose.yml`, so
+they are read from the container's own variables instead of being typed by
+hand.
 
-Dentro de `psql`:
+Inside `psql`:
 
-| Comando       | Qué hace                      |
+| Command       | What it does                  |
 | ------------- | ----------------------------- |
-| `\dt`         | listar tablas                 |
-| `\d patients` | describir la tabla `patients` |
-| `\q`          | salir                         |
+| `\dt`         | list tables                   |
+| `\d patients` | describe the `patients` table |
+| `\q`          | quit                          |
 
-### Ver todas las bases del contenedor
+### See every database in the container
 
 ```bash
 docker exec -it clinica-db sh -c 'psql -U "$POSTGRES_USER" -l'
 ```
 
-Lista todas las bases del servidor Postgres, no solo la de desarrollo.
+Lists every database on the Postgres server, not just the development one.
 
-### Bases que hay en el contenedor
+### Databases in the container
 
-| Base                                 | Para que                          |
-| ------------------------------------ | --------------------------------- |
-| `clinica_dev`                        | desarrollo (`npm run dev`)        |
-| `clinica_test`                       | tests                             |
-| `postgres`, `template0`, `template1` | internas de Postgres, no se tocan |
+| Database                             | What for                              |
+| ------------------------------------ | ------------------------------------- |
+| `clinica_dev`                        | development (`npm run dev`)           |
+| `clinica_test`                       | integration tests                     |
+| `postgres`, `template0`, `template1` | Postgres internals, do not touch them |
 
-### Crear una base nueva
+### Create a new database
 
 ```bash
-docker exec -it clinica-db sh -c 'psql -U "$POSTGRES_USER" -c "CREATE DATABASE nombre_base;"'
+docker exec -it clinica-db sh -c 'psql -U "$POSTGRES_USER" -c "CREATE DATABASE database_name;"'
 ```
 
-### Por que las comillas simples y las dobles
+### Why the single and the double quotes
 
-Hay dos shells metidas una en otra: la de tu Mac (la que lee `docker exec`) y
-la de dentro del contenedor (la que arranca `sh -c`).
+There are two shells nested inside each other: the one on your machine (the
+one that reads `docker exec`) and the one inside the container (the one
+started by `sh -c`).
 
-Las comillas simples `'...'` envuelven el comando entero como un sobre
-cerrado: evitan que **tu Mac** intente expandir `$POSTGRES_USER` antes de que
-el comando llegue al contenedor -- tu Mac no tiene esa variable, solo la tiene
-el contenedor. Dentro, `sh -c` si la expande, con el valor real.
+The single quotes `'...'` wrap the whole command like a sealed envelope: they
+stop **your machine** from trying to expand `$POSTGRES_USER` before the
+command reaches the container -- your machine does not have that variable,
+only the container does. Inside, `sh -c` does expand it, with the real value.
 
-Las comillas dobles alrededor de la variable (`"$POSTGRES_USER"`) protegen el
-valor por si tuviera espacios, para que llegue como un solo argumento.
+The double quotes around the variable (`"$POSTGRES_USER"`) protect the value
+in case it has spaces, so it arrives as a single argument.
 
-### El .env.test
+### The .env.test
 
-Copia de `.env` para los tests, con `DATABASE_URL` apuntando a `clinica_test`
-en vez de a la base de desarrollo. Todo lo demas (usuario, contrasena, host,
-puerto) es igual.
+Used by the integration tests only. The only value they read from it is
+`DATABASE_URL`, pointing to `clinica_test` instead of the development
+database; every other variable (`JWT_SECRET`, `CORS_ORIGIN`, the Resend
+keys) is set to a fake value by `test/integration/setup-env.ts`. The
+database name **must end in `_test`**, or the integration tests refuse to
+start. In CI there is no `.env.test`: `DATABASE_URL` comes from the
+workflow's environment.
 
-**No se sube a Git** -- esta en `.gitignore` junto a `.env`, porque lleva una
-cadena de conexion real. Mismo motivo que `.env`, mismo tratamiento.
+The unit tests do not read it: `test/setup-env.ts` sets fake values for every
+variable, including a `DATABASE_URL` that points nowhere on purpose.
 
-**Trampa con la extension de Jest en VS Code:** ese runner arranca un proceso
-de fondo que lee `.env.test` **una sola vez**, al arrancar. Si cambias el
-archivo despues, la extension sigue usando la version vieja en memoria y
-puede marcar tests en rojo que en terminal (`npm test`, proceso nuevo cada
-vez) pasan bien. Si algo falla solo en la extension y no en terminal,
-reinicia primero: paleta de comandos (`Cmd+Shift+P`) -> `Developer: Reload
-Window`.
+The test database needs the tables too. Create it once and migrate it by
+pointing `DATABASE_URL` at it for that one command:
 
-### El mapa completo: los tres entornos
+```bash
+DATABASE_URL=<the .env.test url> npm run migrate up
+```
 
-Toda la app decide a que base habla en un solo punto: `DATABASE_URL`, leida en
-`src/common/config/env.ts`. Nunca hay que tocar el codigo para cambiar de
-base, solo esa variable. Tres entornos, tres bases, un mismo mecanismo:
+**It is not committed to Git** -- it is in `.gitignore` together with `.env`,
+because it holds a real connection string. Same reason as `.env`, same
+treatment.
 
-| Entorno                    | Quien lo enciende               | Base              | De donde sale `DATABASE_URL`                                 |
-| -------------------------- | ------------------------------- | ----------------- | ------------------------------------------------------------ |
-| Desarrollo (`npm run dev`) | yo, con `docker compose up -d`  | `clinica_dev`     | `.env`                                                       |
-| Test (`npm test`)          | Jest fija `NODE_ENV=test` solo  | `clinica_test`    | `.env.test` (lo carga `env.ts` cuando `NODE_ENV === "test"`) |
-| Produccion (Render)        | Render, 24/7, no lo enciendo yo | `clinica-db-prod` | variable puesta a mano en el panel de Render                 |
+**Gotcha with the Jest extension in VS Code:** that runner starts a
+background process that reads `.env.test` **only once**, on startup. If you
+change the file afterwards, the extension keeps using the old version in
+memory and can mark tests red that pass in the terminal (`npm test`, a new
+process every time). If something fails only in the extension and not in the
+terminal, restart first: command palette (`Cmd+Shift+P`) -> `Developer:
+Reload Window`.
 
-Ninguno de los tres sabe que existen los otros dos. El codigo es identico en
-los tres sitios; lo unico que cambia es de donde sale esa variable.
+### The full map: the three environments
 
-**Como llegaron las tablas a cada base:** las migraciones (`npm run migrate up`)
-son solo SQL. Se corren apuntando `DATABASE_URL` a la base que toque en cada
-momento -- por eso se pudo migrar Render desde mi propio Mac, sin "subir" nada,
-solo cambiando esa variable antes del comando.
+The whole app decides which database to talk to in a single place:
+`DATABASE_URL`, read in `src/common/config/env.ts`. You never have to touch
+the code to switch databases, only that variable. Three environments, three
+databases, one mechanism:
 
-**El Build Command de Render** (`npm install --include=dev && npm run build`):
-instala tambien las devDependencies (hace falta `typescript`, que es una) y
-luego compila con `tsc`. El **Start Command** (`npm start`) arranca el
-JavaScript ya compilado en `dist/`, no el TypeScript original.
+| Environment                        | Who starts it                   | Database          | Where `DATABASE_URL` comes from                                                                   |
+| ---------------------------------- | ------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------- |
+| Development (`npm run dev`)        | me, with `docker compose up -d` | `clinica_dev`     | `.env`                                                                                            |
+| Tests (`npm run test:integration`) | Jest, with `NODE_ENV=test`      | `clinica_test`    | `.env.test` locally (loaded by `test/integration/setup-env.ts`), the workflow's environment in CI |
+| Production (Render)                | Render, 24/7, I do not start it | `clinica-db-prod` | variable set by hand in the Render dashboard                                                      |
+
+None of the three knows the other two exist. The code is identical in all
+three places; the only thing that changes is where that variable comes from.
+(The unit tests have no database at all: their repositories are mocked.)
+
+**How the tables got into each database:** the migrations
+(`npm run migrate up`) are just SQL. They are run with `DATABASE_URL`
+pointing at whichever database is needed at the time -- that is why Render
+could be migrated from my own machine, without "uploading" anything, just by
+changing that variable before the command.
+
+**The Render Build Command** (`npm install --include=dev && npm run build`):
+also installs the devDependencies (it needs `typescript`, which is one of
+them) and then compiles with `tsc`. The **Start Command** (`npm start`) runs
+the JavaScript already compiled into `dist/`, not the original TypeScript.
 
 ---
 
-## Documentación de la API
+## API documentation
 
-Con la API arrancada:
+With the API running:
 
 - **Swagger UI** — http://localhost:3000/docs
 
-La especificación está en `docs/openapi.yaml`. Al modificarla basta con recargar
-el navegador: se lee al arrancar el servidor, así que si `npm run dev` está
-activo la recarga es automática.
+The specification is in `docs/openapi.yaml`. After changing it, reloading the
+browser is enough: it is read when the server starts, so if `npm run dev` is
+running the reload is automatic.
 
-**Colección de Postman** — `docs/postman/clinica-api.postman_collection.json`.
-Se importa desde Postman con _Import > Raw text_.
+**Postman collection** — `docs/postman/clinica-api.postman_collection.json`.
+Import it into Postman with _Import > Raw text_.
 
 ---
 
-## Pruebas manuales rápidas
+## Quick manual tests
 
-Secuencia completa en `docs/referencia/pruebas.md`. Lo mínimo:
+Full sequence in `docs/referencia/pruebas.md`. The minimum:
 
 ```bash
 curl http://localhost:3000/
 ```
 
-Guardar un token en una variable de la terminal:
+Save a token in a terminal variable:
 
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
@@ -247,62 +289,63 @@ TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
 echo $TOKEN
 ```
 
-Usarlo:
+Use it:
 
 ```bash
 curl http://localhost:3000/patients -H "Authorization: Bearer $TOKEN"
 ```
 
-El token caduca a la hora. Al recibir 401 en todo, repetir el paso anterior.
+The token expires after one hour. If you get 401 on everything, repeat the
+previous step.
 
 ---
 
 ## Git
 
-### Empezar una tarea
+### Start a task
 
 ```bash
 git checkout dev
 git pull origin dev
-git checkout -b feature/nombre-de-la-tarea
+git checkout -b feature/task-name
 ```
 
-### Antes de cada commit
+### Before every commit
 
 ```bash
-npm run typecheck && npm run lint && npm run format:check
+npm run typecheck && npm run lint && npm run format:check && npm run test:unit
 ```
 
-Un commit debe dejar el repositorio funcionando. Si no compila, bloquea al resto
-del equipo.
+A commit must leave the repository working. If it does not compile, it is
+not ready to share.
 
 ### Commit
 
 ```bash
-git add <archivos>
-git commit -m "tipo: descripcion en imperativo"
+git add <files>
+git commit -m "type: description in the imperative"
 ```
 
-Prefijos en uso:
+Prefixes in use:
 
-| Prefijo    | Para qué                                        |
-| ---------- | ----------------------------------------------- |
-| `feat`     | funcionalidad nueva                             |
-| `fix`      | corrección de un fallo                          |
-| `chore`    | herramientas, configuración, dependencias       |
-| `docs`     | documentación que no afecta a lo que se ejecuta |
-| `style`    | formato, sin cambios de lógica                  |
-| `refactor` | reorganización sin cambio de comportamiento     |
-| `test`     | pruebas                                         |
+| Prefix     | What for                                     |
+| ---------- | -------------------------------------------- |
+| `feat`     | new functionality                            |
+| `fix`      | bug fix                                      |
+| `chore`    | tooling, configuration, dependencies         |
+| `docs`     | documentation that does not affect what runs |
+| `style`    | formatting, no logic changes                 |
+| `refactor` | reorganization with no behaviour change      |
+| `test`     | tests                                        |
 
-Un reformateo masivo va **siempre en su propio commit**: mezclado con lógica,
-el diff se vuelve irrevisable.
+A large reformat **always goes in its own commit**: mixed with logic, the diff
+becomes impossible to review.
 
-### Integrar
+### Merge
 
 ```bash
 git checkout dev
-git merge feature/nombre-de-la-tarea
+git merge feature/task-name
 git push origin dev
 ```
 
@@ -313,59 +356,62 @@ git push origin main
 ```
 
 ```bash
-git branch -d feature/nombre-de-la-tarea
+git branch -d feature/task-name
 ```
 
-### Consultar el estado
+### Check the state
 
 ```bash
-git status --short          # qué he tocado
-git log --oneline -10       # los ultimos commits
-git diff --stat             # cuanto ha cambiado cada archivo
-git branch --show-current   # en que rama estoy
+git status --short          # what I have touched
+git log --oneline -10       # the latest commits
+git diff --stat             # how much each file has changed
+git branch --show-current   # which branch I am on
 ```
 
 ---
 
-## Dependencias
+## Dependencies
 
 ```bash
-npm install                    # instalar todo lo del package.json
-npm install <paquete>          # dependencia de produccion
-npm install -D <paquete>       # dependencia de desarrollo
+npm install                    # install everything in package.json
+npm install <package>          # production dependency
+npm install -D <package>       # development dependency
 ```
 
-Analogia: montar un mueble de IKEA. Las `dependencies` son las piezas que se
-quedan puestas en el mueble final (patas, tornillos) -- sin ellas no hay
-mueble. Las `devDependencies` son las herramientas para montarlo
-(destornillador) -- hacen falta mientras se construye, pero no se quedan
-pegadas al resultado. Una vez que `tsc` compilo el codigo a `dist/`, ese
-JavaScript se ejecuta con `node` sin necesitar TypeScript instalado.
+Analogy: assembling flat-pack furniture. The `dependencies` are the parts
+that stay in the finished piece (legs, screws) -- without them there is no
+furniture. The `devDependencies` are the tools to assemble it (screwdriver)
+-- you need them while building, but they do not stay attached to the result.
+Once `tsc` has compiled the code into `dist/`, that JavaScript runs with
+`node` without needing TypeScript installed.
 
-La pregunta que decide dónde va: **¿esto se ejecuta en el servidor?** Si la
-respuesta es sí, va en `dependencies`.
+The question that decides where it goes: **does this run on the server?** If
+the answer is yes, it goes in `dependencies`.
 
-`pino-pretty` es de desarrollo. `yaml` es de producción, porque la API lee el
-`openapi.yaml` al arrancar.
+`pino-pretty` is a development dependency. `yaml` is a production one,
+because the API reads `openapi.yaml` on startup.
 
 ```bash
-npm outdated                   # que paquetes tienen version nueva
-npm audit                      # vulnerabilidades conocidas
+npm outdated                   # which packages have a new version
+npm audit                      # known vulnerabilities
 ```
 
-Antes de actualizar una versión mayor, comprobar las _peer dependencies_: la
-versión buena no es la más nueva, es la más nueva que soporta toda la cadena de
-herramientas.
+Before upgrading a major version, check the _peer dependencies_: the right
+version is not the newest one, it is the newest one that the whole toolchain
+supports.
 
 ---
 
-## Si algo falla
+## If something fails
 
-| Síntoma                             | Causa                              | Solución                                            |
-| ----------------------------------- | ---------------------------------- | --------------------------------------------------- |
-| 500 en todo lo que toca datos       | el contenedor no está levantado    | `docker compose up -d`                              |
-| 401 de repente en todo              | el token ha caducado               | volver a hacer login                                |
-| 429 en el login                     | límite de 5 intentos fallidos      | esperar 15 min o reiniciar el servidor              |
-| Un cambio en `.env` no surte efecto | las variables se leen al arrancar  | reiniciar `npm run dev` a mano                      |
-| ESLint no marca nada en el editor   | el servidor de ESLint está colgado | paleta de comandos: `ESLint: Restart ESLint Server` |
-| `command not found: eslint`         | falta el prefijo del script        | usar `npm run lint`, no `eslint`                    |
+| Symptom                                                   | Cause                                                   | Fix                                                   |
+| --------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 500 on everything that touches data                       | the container is not up                                 | `docker compose up -d`                                |
+| Sudden 401 on everything                                  | the token has expired                                   | log in again                                          |
+| 429 on login                                              | limit of 5 failed attempts                              | wait 15 min or restart the server                     |
+| A change in `.env` has no effect                          | the variables are read on startup                       | restart `npm run dev` by hand                         |
+| ESLint flags nothing in the editor                        | the ESLint server is stuck                              | command palette: `ESLint: Restart ESLint Server`      |
+| `command not found: eslint`                               | missing script prefix                                   | use `npm run lint`, not `eslint`                      |
+| `Refusing to run integration tests ...`                   | `DATABASE_URL` in `.env.test` is not a `_test` database | point it at `clinica_test`                            |
+| `Integration tests need DATABASE_URL ...`                 | no `.env.test` (or no `DATABASE_URL` in it)             | create `.env.test` with the test database URL         |
+| Integration tests fail with `relation ... does not exist` | the test database has no tables                         | `DATABASE_URL=<the .env.test url> npm run migrate up` |

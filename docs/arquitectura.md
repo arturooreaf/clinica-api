@@ -1,212 +1,214 @@
-# Arquitectura del proyecto
+# Project architecture
 
-> Cómo está montada la API por dentro: qué capas hay, qué hace cada una, qué
-> tiene prohibido hacer, y cómo viaja una petición desde que entra hasta que
-> sale. Escrito para poder **defenderlo**, no solo para consultarlo.
-
----
-
-## 1. Antes de nada: esto NO es arquitectura hexagonal
-
-Conviene aclararlo desde el principio, porque es justo el tipo de cosa por la
-que te pueden preguntar en el TFG o tu jefe.
-
-Lo que tienes es **arquitectura en capas** (_layered architecture_), con una
-carpeta `infra/` que hace un guiño a la idea hexagonal. No es lo mismo:
-
-|                                                | Arquitectura en capas (lo tuyo)                                                                           | Hexagonal (puertos y adaptadores)                                                                     |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Cómo llama el servicio al repositorio          | `import * as patientData from "./infra/repositories/patient.repository"` — importa **el módulo concreto** | El servicio depende de una **interfaz** (`PatientRepository`), y alguien le inyecta la implementación |
-| Si mañana cambias Postgres por MongoDB         | tocas el servicio, porque apunta directo al archivo                                                       | no tocas el servicio: escribes otro adaptador que cumple la misma interfaz                            |
-| Se puede testear el servicio sin base de datos | no fácilmente                                                                                             | sí, le pasas un repositorio falso                                                                     |
-
-**¿Está mal lo tuyo?** No. Para una API de este tamaño, hexagonal sería
-sobreingeniería: añadirías interfaces y una capa de inyección de dependencias
-para resolver un problema (cambiar de base de datos) que no tienes. En capas
-es una decisión legítima y es lo que se ve en la mayoría de APIs Express de
-este tamaño.
-
-**Lo que no puedes hacer es llamarlo hexagonal.** Si te preguntan, la
-respuesta buena es: _"es arquitectura en capas con separación estricta de
-responsabilidades; la carpeta `infra/` aísla el acceso a datos, pero no hay
-inversión de dependencias, así que no es hexagonal propiamente dicha"_.
+> How the API is built on the inside: which layers there are, what each one
+> does, what it is forbidden to do, and how a request travels from the moment
+> it comes in until it goes out. Written to be **defended**, not just looked
+> up.
 
 ---
 
-## 2. El esquema de capas
+## 1. First things first: this is NOT hexagonal architecture
+
+It is worth making this clear from the start, because it is exactly the kind
+of thing you may be asked about in a code review or an interview.
+
+What you have is a **layered architecture**, with an `infra/` folder that
+nods to the hexagonal idea. They are not the same:
+
+|                                              | Layered architecture (this project)                                                                        | Hexagonal (ports and adapters)                                                                        |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| How the service calls the repository         | `import * as patientData from "./infra/repositories/patient.repository"` — imports **the concrete module** | The service depends on an **interface** (`PatientRepository`), and someone injects the implementation |
+| If tomorrow you swap Postgres for MongoDB    | you touch the service, because it points straight at the file                                              | you do not touch the service: you write another adapter that fulfils the same interface               |
+| Can the service be tested without a database | only by replacing the whole module with `jest.mock` (which is what the unit tests do)                      | yes, you pass it a fake repository                                                                    |
+
+**Is this approach wrong?** No. For an API of this size, hexagonal would be
+over-engineering: you would add interfaces and a dependency injection layer to
+solve a problem (switching databases) that you do not have. Layered is a
+legitimate decision and it is what most Express APIs of this size look like.
+
+**What you cannot do is call it hexagonal.** If you are asked, the good
+answer is: _"it is a layered architecture with a strict separation of
+responsibilities; the `infra/` folder isolates data access, but there is no
+dependency inversion, so it is not hexagonal in the proper sense"_.
+
+---
+
+## 2. The layer diagram
 
 ```mermaid
 graph TD
-    A["server.ts<br/>solo hace listen"] --> B["app.ts<br/>monta middlewares y routers"]
-    B --> C["Middlewares globales<br/>cors, json, logger, rateLimit"]
-    C --> D["Router del módulo<br/>patient.routes.ts"]
-    D --> E["authMiddleware<br/>¿quién eres?"]
-    E --> F["Middleware de validación<br/>¿los datos valen?"]
-    F --> G["Controlador<br/>habla HTTP"]
-    G --> H["Servicio<br/>lógica de negocio"]
-    H --> I["Repositorio<br/>ÚNICO que toca SQL"]
+    A["server.ts<br/>only calls listen"] --> B["app.ts<br/>mounts middlewares and routers"]
+    B --> C["Global middlewares<br/>cors, json, logger, rateLimit"]
+    C --> D["Module router<br/>patient.routes.ts"]
+    D --> E["authMiddleware<br/>who are you?"]
+    E --> F["Validation middleware<br/>is the data valid?"]
+    F --> G["Controller<br/>speaks HTTP"]
+    G --> H["Service<br/>business logic"]
+    H --> I["Repository<br/>the ONLY one that touches SQL"]
     I --> J[("PostgreSQL")]
 ```
 
-La regla de oro: **cada capa solo habla con la de justo debajo.** Un
-controlador nunca llama a `pool.query`. Un repositorio nunca sabe qué es un
-código de estado HTTP.
+The golden rule: **each layer only talks to the one right below it.** A
+controller never calls `pool.query`. A repository never knows what an HTTP
+status code is.
 
-### Qué hace y qué tiene PROHIBIDO cada capa
+### What each layer does and what it is FORBIDDEN to do
 
-| Capa            | Archivo de ejemplo      | Su trabajo                                         | Lo que tiene prohibido                        |
-| --------------- | ----------------------- | -------------------------------------------------- | --------------------------------------------- |
-| **Arranque**    | `server.ts`             | abrir el puerto                                    | cualquier otra cosa (son 7 líneas)            |
-| **Aplicación**  | `app.ts`                | montar middlewares y routers, exportar `app`       | abrir el puerto — por eso funcionan los tests |
-| **Middlewares** | `auth.middleware.ts`    | comprobar antes de trabajar; `next()` o cortar     | lógica de negocio                             |
-| **Rutas**       | `patient.routes.ts`     | mapear URL + método → controlador                  | contener lógica                               |
-| **Controlador** | `patient.controller.ts` | leer `req`, decidir el código de estado, responder | SQL, y saber cómo se guarda un paciente       |
-| **Servicio**    | `patient.service.ts`    | reglas de negocio, logs de negocio                 | tocar `req`/`res`, saber que HTTP existe      |
-| **Repositorio** | `patient.repository.ts` | **el único que ejecuta SQL**                       | decidir códigos de estado o reglas de negocio |
-| **Tipos**       | `patient.types.ts`      | describir la forma de los datos                    | nada, no se ejecuta (no genera JavaScript)    |
+| Layer           | Example file            | Its job                                        | What it is forbidden to do                     |
+| --------------- | ----------------------- | ---------------------------------------------- | ---------------------------------------------- |
+| **Startup**     | `server.ts`             | open the port                                  | anything else (it is 8 lines)                  |
+| **Application** | `app.ts`                | mount middlewares and routers, export `app`    | open the port — that is why the tests work     |
+| **Middlewares** | `auth.middleware.ts`    | check before working; `next()` or cut it short | business logic                                 |
+| **Routes**      | `patient.routes.ts`     | map URL + method → controller                  | contain logic                                  |
+| **Controller**  | `patient.controller.ts` | read `req`, decide the status code, respond    | SQL, and knowing how a patient is stored       |
+| **Service**     | `patient.service.ts`    | business rules, business logs                  | touching `req`/`res`, knowing HTTP exists      |
+| **Repository**  | `patient.repository.ts` | **the only one that runs SQL**                 | deciding status codes or business rules        |
+| **Types**       | `patient.types.ts`      | describe the shape of the data                 | nothing, it does not run (emits no JavaScript) |
 
 ---
 
-## 3. La capa de tipos: quién la usa y por qué
+## 3. The types layer: who uses it and why
 
-`types/patient.types.ts` no hace nada en tiempo de ejecución — TypeScript los
-borra al compilar. Su valor es que **son el contrato entre capas**:
+`types/patient.types.ts` does nothing at runtime — TypeScript erases types
+when compiling. Their value is that **they are the contract between layers**:
 
 ```ts
 export interface Patient {
-  // lo que SALE de la base
+  // what COMES OUT of the database
   id: number;
   name: string;
   age: number;
   diagnosis?: string;
-  owner_id: number; // snake_case: viene tal cual del SQL
+  owner_id: number; // snake_case: comes straight from the SQL
 }
 
 export interface CreatePatientInput {
-  // lo que ENTRA para crear
+  // what GOES IN to create one
   name: string;
   age: number;
   diagnosis?: string;
-} // fíjate: no lleva id ni owner_id
+} // note: no id and no owner_id
 ```
 
-Tres tipos distintos para el mismo concepto, y eso es deliberado:
+Three different types for the same concept, and that is deliberate:
 
-- `Patient` — lo que existe ya en la base. Tiene `id` porque la base lo generó.
-- `CreatePatientInput` — lo que el cliente manda para crear. **No** tiene `id`
-  (aún no existe) ni `owner_id` (lo pone el servidor desde el token, no el
-  cliente: si viniera del body, cualquiera podría crear pacientes a nombre de
-  otro médico).
-- `UpdatePatientInput` — todos los campos opcionales, porque un `PATCH` es una
-  actualización parcial.
+- `Patient` — what already exists in the database. It has an `id` because the
+  database generated it.
+- `CreatePatientInput` — what the client sends to create one. It does **not**
+  have an `id` (it does not exist yet) or an `owner_id` (the server sets it
+  from the token, not the client: if it came from the body, anyone could
+  create patients on behalf of another practitioner).
+- `UpdatePatientInput` — every field optional, because a `PATCH` is a partial
+  update.
 
-Los usan el **servicio** y el **repositorio**. El controlador trabaja con lo
-que saca de `req.body`, que llega sin tipar.
+They are used by the **service** and the **repository**. The controller works
+with what it takes from `req.body`, which arrives untyped.
 
-> **La frontera de nombres está en el repositorio.** Dentro del string SQL va
-> `owner_id` (nombre de columna, snake_case). Fuera, en variables TypeScript,
-> va `ownerId` (camelCase). El repositorio es el traductor entre los dos
-> mundos.
+> **The naming boundary is in the repository.** Inside the SQL string it is
+> `owner_id` (column name, snake_case). Outside, in TypeScript variables, it
+> is `ownerId` (camelCase). The repository is the translator between the two
+> worlds.
 
 ---
 
-## 4. Recorrido completo de una petición con auth
+## 4. Full journey of an authenticated request
 
-Este es el caso `POST /patients` con token válido y datos válidos:
+This is the `POST /patients` case with a valid token and valid data:
 
 ```mermaid
 sequenceDiagram
-    participant C as Cliente
-    participant M as Middlewares globales
+    participant C as Client
+    participant M as Global middlewares
     participant R as patient.routes
     participant A as authMiddleware
     participant V as validateCreatePatient
-    participant Ctrl as Controlador
-    participant S as Servicio
-    participant Repo as Repositorio
+    participant Ctrl as Controller
+    participant S as Service
+    participant Repo as Repository
     participant DB as PostgreSQL
 
     C->>M: POST /patients + Bearer token + body
     M->>M: cors, express.json(), traceId, rateLimit
-    M->>R: entra en el router de /patients
+    M->>R: enters the /patients router
     R->>A: router.use(authMiddleware)
     A->>A: jwt.verify(token, JWT_SECRET)
-    A->>R: req.user = { userId } y next()
-    R->>V: middleware de la ruta POST
-    V->>V: ¿name string? ¿age number?
+    A->>R: req.user = { userId } and next()
+    R->>V: middleware of the POST route
+    V->>V: name a string? age a number?
     V->>Ctrl: next()
     Ctrl->>Ctrl: ownerId = req.user.userId
     Ctrl->>S: createPatient({name, age, diagnosis}, ownerId)
     S->>Repo: create(data, ownerId)
     Repo->>DB: INSERT ... RETURNING ...
-    DB->>Repo: la fila creada
+    DB->>Repo: the created row
     Repo->>S: Patient
-    S->>S: logger.info("Paciente creado")
+    S->>S: logger.info("Patient created")
     S->>Ctrl: Patient
-    Ctrl->>C: 201 + JSON del paciente
+    Ctrl->>C: 201 + patient JSON
 ```
 
-### El orden de los middlewares globales, y por qué importa
+### The order of the global middlewares, and why it matters
 
-En `app.ts`, este es el orden real:
+In `app.ts`, this is the actual order:
 
-1. `corsMiddleware` — cabeceras CORS.
-2. `express.json()` — convierte el body de texto a objeto. **Si esto fuera
-   después de las rutas, `req.body` sería `undefined` en todas partes.**
+1. `corsMiddleware` — CORS headers.
+2. `express.json()` — turns the text body into an object. **If this came
+   after the routes, `req.body` would be `undefined` everywhere.**
 3. `/docs` — Swagger UI.
-4. `requestLogger` — genera el `traceId`, lo mete en la cabecera
-   `X-Trace-Id` y arranca el `AsyncLocalStorage`.
-5. `generalLimiter` — límite de 100 peticiones por 15 min.
-6. Las rutas.
-7. `errorHandle` — el último, porque un manejador de errores solo se alcanza
-   si algo revienta antes.
+4. `requestLogger` — generates the `traceId`, puts it in the `X-Trace-Id`
+   header and starts the `AsyncLocalStorage`.
+5. `generalLimiter` — limit of 100 requests per 15 min.
+6. The routes.
+7. `errorHandle` — last, because an error handler is only reached if
+   something blows up before it.
 
-### Dónde vive la autorización, y por qué en dos sitios
+### Where authorization lives, and why in two places
 
-- **Autenticación** (_¿quién eres?_) → `authMiddleware`, montado con
-  `router.use()` en el router entero. Protege **todas** las rutas del módulo
-  de golpe. Por eso un único test de 401 por router cubre todas sus rutas.
-- **Autorización** (_¿puedes tocar ESTE paciente?_) → dentro de cada
-  controlador, comparando `patient.owner_id !== ownerId`. No puede estar en un
-  middleware genérico porque necesita **consultar la base** para saber de quién
-  es ese paciente concreto.
+- **Authentication** (_who are you?_) → `authMiddleware`, mounted with
+  `router.use()` on the whole router. It protects **every** route of the
+  module at once. That is why a single 401 test per router covers all its
+  routes.
+- **Authorization** (_can you touch THIS patient?_) → inside each controller,
+  comparing `patient.owner_id !== ownerId`. It cannot live in a generic
+  middleware because it needs to **query the database** to know who that
+  specific patient belongs to.
 
-El orden de comprobaciones dentro del controlador es siempre el mismo, y es
-deliberado:
+The order of checks inside the controller is always the same, and it is
+deliberate:
 
 ```
-401 (no hay token)  →  400 (el id no es número)  →  404 (no existe)  →  403 (existe pero no es tuyo)
+401 (no token)  →  400 (the id is not a number)  →  404 (does not exist)  →  403 (exists but is not yours)
 ```
 
-> Fíjate en el orden 404 antes que 403: primero compruebas que existe, después
-> si es tuyo. Al revés no podrías, porque no sabrías de quién es algo que no
-> existe.
+> Note the order, 404 before 403: first you check that it exists, then whether
+> it is yours. The other way round would not work, because you could not know
+> who owns something that does not exist.
 
 ---
 
-## 5. El CRUD entero, ruta por ruta
+## 5. The whole CRUD, route by route
 
-| Método   | Ruta            | Middlewares de ruta            | Qué hace el repositorio             | Respuesta             |
+| Method   | Route           | Route middlewares              | What the repository does            | Response              |
 | -------- | --------------- | ------------------------------ | ----------------------------------- | --------------------- |
 | `GET`    | `/patients`     | auth                           | `SELECT ... WHERE owner_id = $1`    | 200 + array           |
 | `GET`    | `/patients/:id` | auth                           | `SELECT ... WHERE id = $1`          | 200 / 400 / 404 / 403 |
-| `POST`   | `/patients`     | auth + `validateCreatePatient` | `INSERT ... RETURNING`              | 201 + el paciente     |
+| `POST`   | `/patients`     | auth + `validateCreatePatient` | `INSERT ... RETURNING`              | 201 + the patient     |
 | `PATCH`  | `/patients/:id` | auth + `validateUpdatePatient` | `UPDATE ... COALESCE ... RETURNING` | 200 / 400 / 404 / 403 |
-| `DELETE` | `/patients/:id` | auth                           | `DELETE WHERE id = $1`              | 204 sin cuerpo        |
+| `DELETE` | `/patients/:id` | auth                           | `DELETE WHERE id = $1`              | 204 with no body      |
 
-### Dos detalles del repositorio que hay que saber explicar
+### Two repository details you need to be able to explain
 
-**1. El filtrado del listado se hace en SQL, no en JavaScript.**
+**1. The list is filtered in SQL, not in JavaScript.**
 
 ```sql
 SELECT * FROM patients WHERE owner_id = $1 ORDER BY id
 ```
 
-No traes todos los pacientes y luego filtras con `.filter()`. Traes solo los
-tuyos. Con 10 filas da igual; con 100.000 es la diferencia entre una API que
-responde y una que se cae.
+You do not fetch every patient and then filter with `.filter()`. You fetch
+only yours. With 10 rows it makes no difference; with 100,000 it is the
+difference between an API that responds and one that falls over.
 
-**2. El `PATCH` parcial se resuelve con `COALESCE`.**
+**2. The partial `PATCH` is solved with `COALESCE`.**
 
 ```sql
 UPDATE patients
@@ -216,110 +218,113 @@ UPDATE patients
  WHERE id = $1
 ```
 
-`COALESCE(a, b)` devuelve `a` si no es `NULL`, y si lo es devuelve `b`. Como
-el repositorio manda `data.name ?? null`, un campo que no venga llega como
-`NULL` y la columna se queda **con el valor que ya tenía**. Un solo `UPDATE`
-sirve para cualquier combinación de campos.
+`COALESCE(a, b)` returns `a` if it is not `NULL`, and if it is, returns `b`.
+Since the repository sends `data.name ?? null`, a field that is missing
+arrives as `NULL` and the column **keeps the value it already had**. A single
+`UPDATE` works for any combination of fields.
 
-> **Ojo, y esto te afecta ahora mismo:** el `RETURNING` del `update` devuelve
-> `id, name, age, diagnosis` — **sin `owner_id`**, a diferencia del `create`,
-> que sí lo devuelve. Así que la respuesta de un `PATCH` correcto no trae
-> `owner_id`. Si escribes un test que compruebe `owner_id` en la respuesta del
-> PATCH, fallará, y no por culpa del test.
+> **Watch out, this affects you right now:** the `RETURNING` of `update`
+> returns `id, name, age, diagnosis` — **without `owner_id`**, unlike
+> `create`, which does return it. So the response of a successful `PATCH`
+> does not include `owner_id`. If you write a test that checks `owner_id` in
+> the PATCH response, it will fail, and not because of the test.
 
 ---
 
-## 6. El flujo de autenticación, aparte
+## 6. The authentication flow, separately
 
-`/auth` es el único módulo sin `authMiddleware` — sería absurdo pedir token
-para pedir un token.
+`/auth` is the only module without `authMiddleware` — it would be absurd to
+require a token to ask for a token.
 
 ```mermaid
 graph LR
     A["POST /auth/register"] --> B["bcrypt.hash(password, 10)"]
     B --> C["INSERT INTO users"]
-    C --> D["201 sin la contraseña"]
+    C --> D["201 without the password"]
 
-    E["POST /auth/login"] --> F["SELECT user por email"]
+    E["POST /auth/login"] --> F["SELECT user by email"]
     F --> G["bcrypt.compare"]
     G --> H["jwt.sign({userId}, JWT_SECRET, 1h)"]
     H --> I["200 + token"]
 ```
 
-Dos decisiones de seguridad que hay ahí dentro:
+Two security decisions live in there:
 
-- **La contraseña nunca sale.** El repositorio devuelve el `User` completo con
-  `password_hash`, pero el servicio construye un `UserView` (`id`, `email`,
-  `name`) y es eso lo que llega al controlador. El tipo `UserView` **existe
-  precisamente para que sea imposible** filtrar el hash por descuido.
-- **El mismo error para email inexistente y contraseña mala.** Los dos casos
-  devuelven `401 "Malas credenciales"`. Si dijeras "ese email no existe",
-  estarías confirmando qué emails están registrados en una clínica.
+- **The password never leaves.** The repository returns the full `User` with
+  `password_hash`, but the service builds a `UserView` (`id`, `email`,
+  `name`) and that is what reaches the controller. The `UserView` type
+  **exists precisely to make it impossible** to leak the hash by accident.
+- **The same error for an unknown email and a wrong password.** Both cases
+  return `401 "Invalid credentials"`. If you said "that email does not
+  exist", you would be confirming which emails are registered at a clinic.
 
-Ambas rutas llevan `authLimiter` (5 intentos por 15 min, y solo cuentan los
-fallidos gracias a `skipSuccessfulRequests`), que es más estricto que el
-`generalLimiter` del resto de la API.
-
----
-
-## 7. Las piezas transversales
-
-| Pieza                    | Archivo                     | Qué resuelve                                                                                                         |
-| ------------------------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Pool de conexiones**   | `database/pool.ts`          | Único punto donde se decide a qué base se habla, vía `DATABASE_URL`. Cambiar de base **nunca** requiere tocar código |
-| **Configuración**        | `common/config/env.ts`      | Carga `.env` o `.env.test` según `NODE_ENV`, y **valida al arrancar**: si falta una variable, la app no levanta      |
-| **Trace ID**             | `common/context.ts`         | `AsyncLocalStorage` lleva un id único por petición, para poder seguir una petición entera entre logs                 |
-| **Logger**               | `common/logger.ts`          | Pino. Nivel `debug` en desarrollo, `info` en producción                                                              |
-| **Tipado de `req.user`** | `common/types/express.d.ts` | `declare global` + _declaration merging_ para añadir `user` al `Request` de Express                                  |
+Both routes use `authLimiter` (5 attempts per 15 min, and only failed ones
+count thanks to `skipSuccessfulRequests`), which is stricter than the
+`generalLimiter` of the rest of the API.
 
 ---
 
-## 8. Deudas de arquitectura conocidas
+## 7. The cross-cutting pieces
 
-No son descuidos: están identificadas y se pueden defender como tales.
-
-1. **`errorHandle` está montado pero nunca se alcanza.** Los cinco
-   controladores llevan su propio `try/catch` que responde 500, así que el
-   error nunca llega al manejador global. Lo correcto sería quitar los
-   `catch` repetidos y dejar que el error suba — pero eso exige pasar
-   `next(error)` en todos, y es una refactorización pendiente.
-2. **El servicio importa el repositorio concreto** (lo del punto 1: no hay
-   inversión de dependencias). Consecuencia práctica: no se pueden hacer
-   unit tests del servicio sin base de datos real.
-3. **`patient.service.ts` usa `owner_Id`** (con la I mayúscula) en
-   `listPatients`. Ni snake_case ni camelCase: resto de un renombrado a
-   medias.
-4. **`X-Powered-By` sigue activo** — falta `app.disable("x-powered-by")`.
-5. **`/docs` es público en producción.** Decisión consciente para el TFG; en
-   una API sanitaria real iría detrás de autenticación.
+| Piece                    | File                        | What it solves                                                                                                                      |
+| ------------------------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Connection pool**      | `database/pool.ts`          | The single place that decides which database to talk to, via `DATABASE_URL`. Switching databases **never** needs code changes       |
+| **Configuration**        | `common/config/env.ts`      | Loads `.env` or `.env.test` depending on `NODE_ENV`, and **validates on startup**: if a variable is missing, the app does not start |
+| **Trace ID**             | `common/context.ts`         | `AsyncLocalStorage` carries a unique id per request, so a whole request can be followed across the logs                             |
+| **Logger**               | `common/logger.ts`          | Pino. `debug` level in development, `info` in production                                                                            |
+| **Typing of `req.user`** | `common/types/express.d.ts` | `declare global` + _declaration merging_ to add `user` to Express's `Request`                                                       |
 
 ---
 
-## 9. Preguntas que te pueden hacer, y la respuesta corta
+## 8. Known architecture debt
 
-**¿Por qué separas `app.ts` de `server.ts`?**
-Porque importar `app.ts` no abre ningún puerto. Es lo que permite que
-supertest lance peticiones contra la aplicación en memoria durante los tests,
-sin levantar un servidor real.
+These are not oversights: they have been identified and can be defended as
+such.
 
-**¿Por qué el repositorio es el único que toca SQL?**
-Para tener un solo sitio donde mirar cuando algo de base de datos falla, y
-para que cambiar una consulta no obligue a tocar lógica de negocio. También es
-lo que hace posible (en el futuro) cambiar de motor de base de datos tocando
-una sola capa.
+1. **`errorHandle` is mounted but never reached.** Every controller has its
+   own `try/catch` that responds 500, so the error never reaches the global
+   handler. The right thing would be to remove the repeated `catch` blocks
+   and let the error bubble up — but that requires calling `next(error)`
+   everywhere, and it is a pending refactor.
+2. **The service imports the concrete repository** (the point from section 1:
+   there is no dependency inversion). Practical consequence: the service can
+   only be unit-tested without a real database by replacing the repository
+   module with `jest.mock`, not by passing it a fake.
+3. **`patient.service.ts` uses `owner_Id`** (with a capital I) in
+   `listPatients`. Neither snake_case nor camelCase: a leftover from a
+   half-finished rename.
+4. **`X-Powered-By` is still enabled** — `app.disable("x-powered-by")` is
+   missing.
+5. **`/docs` is public in production.** A conscious decision for a portfolio
+   project; in a real healthcare API it would sit behind authentication.
 
-**¿Por qué el `owner_id` no viene en el body?**
-Porque el cliente no es de fiar. Viene del token, que está firmado con un
-secreto que solo conoce el servidor. Si viniera del body, cualquiera podría
-crear pacientes a nombre de otro médico.
+---
 
-**¿Por qué 403 y no 404 cuando el paciente es de otro?**
-Es una decisión discutible y hay que saberlo: devolver 403 confirma que ese
-paciente existe. Algunas APIs devuelven 404 a propósito para no filtrar ni
-eso. Aquí se eligió 403 por claridad, asumiendo que la existencia de un id no
-es información sensible en este contexto.
+## 9. Questions you may be asked, and the short answer
 
-**¿Qué pasa si cae la base de datos?**
-El `pool.query` lanza, el `catch` del controlador lo captura, se registra con
-`logger.error` y el cliente recibe un 500 genérico — sin detalles internos,
-que es lo correcto: los detalles van al log, no al cliente.
+**Why do you separate `app.ts` from `server.ts`?**
+Because importing `app.ts` does not open any port. That is what lets
+supertest send requests to the in-memory application during the tests,
+without starting a real server.
+
+**Why is the repository the only one that touches SQL?**
+To have a single place to look when something database-related fails, and so
+that changing a query does not force you to touch business logic. It is also
+what makes it possible (in the future) to switch database engines by touching
+a single layer.
+
+**Why does `owner_id` not come in the body?**
+Because the client cannot be trusted. It comes from the token, which is
+signed with a secret only the server knows. If it came from the body, anyone
+could create patients on behalf of another practitioner.
+
+**Why 403 and not 404 when the patient belongs to someone else?**
+It is a debatable decision and you need to know that: returning 403 confirms
+that the patient exists. Some APIs return 404 on purpose so as not to leak
+even that. Here 403 was chosen for clarity, assuming that the existence of an
+id is not sensitive information in this context.
+
+**What happens if the database goes down?**
+`pool.query` throws, the controller's `catch` captures it, it is logged with
+`logger.error` and the client gets a generic 500 — with no internal details,
+which is correct: the details go to the log, not to the client.
