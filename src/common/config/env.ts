@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 const envFile = process.env.NODE_ENV === "test" ? ".env.test" : ".env";
 
-dotenv.config({ path: envFile });
+dotenv.config({ path: envFile, quiet: true });
 export function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
