@@ -8,17 +8,15 @@ function validateSendEmail(req: Request, res: Response, next: NextFunction) {
     typeof subject !== "string" ||
     typeof text !== "string"
   ) {
-    return res.status(400).json({ error: "Datos inválidos" });
+    return res.status(400).json({ error: "Invalid data" });
   }
 
   if (to.trim() === "" || subject.trim() === "" || text.trim() === "") {
-    return res.status(400).json({ error: "Los campos no pueden estar vacíos" });
+    return res.status(400).json({ error: "Fields cannot be empty" });
   }
 
   if (!to.includes("@")) {
-    return res
-      .status(400)
-      .json({ error: "El destinatario no es un email válido" });
+    return res.status(400).json({ error: "Recipient is not a valid email" });
   }
 
   next();

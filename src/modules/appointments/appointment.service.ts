@@ -8,7 +8,7 @@ import {
 
 export async function listAppointments(): Promise<Appointment[]> {
   const appointments = await AppointmentData.getAll();
-  logger.debug({ count: appointments.length }, "Citas listadas");
+  logger.debug({ count: appointments.length }, "Appointments listed");
   return appointments;
 }
 
@@ -17,10 +17,10 @@ export async function getAppointmentById(
 ): Promise<Appointment | undefined> {
   const appointment = await AppointmentData.getById(id);
   if (!appointment) {
-    logger.debug({ appointmentId: id }, "Cita no encontrada");
+    logger.debug({ appointmentId: id }, "Appointment not found");
     return undefined;
   }
-  logger.debug({ appointmentId: id }, "Cita consultada");
+  logger.debug({ appointmentId: id }, "Appointment retrieved");
   return appointment;
 }
 
@@ -30,7 +30,7 @@ export async function createAppointment(
   const appointment = await AppointmentData.create(data);
   logger.info(
     { appointmentId: appointment.id, patientId: appointment.patient_id },
-    "Cita creada",
+    "Appointment created",
   );
   return appointment;
 }
@@ -43,13 +43,13 @@ export async function updateAppointment(
   if (!appointment) {
     logger.warn(
       { appointmentId: id },
-      "Actualizacion fallida: la cita no existe",
+      "Update failed: appointment does not exist",
     );
     return undefined;
   }
   logger.info(
     { appointmentId: id, fields: Object.keys(data) },
-    "Cita actualizada",
+    "Appointment updated",
   );
   return appointment;
 }
@@ -57,9 +57,12 @@ export async function updateAppointment(
 export async function deleteAppointment(id: number): Promise<boolean> {
   const deleted = await AppointmentData.remove(id);
   if (!deleted) {
-    logger.warn({ appointmentId: id }, "Borrado fallido: la cita no existe");
+    logger.warn(
+      { appointmentId: id },
+      "Delete failed: appointment does not exist",
+    );
     return false;
   }
-  logger.info({ appointmentId: id }, "Cita eliminada");
+  logger.info({ appointmentId: id }, "Appointment deleted");
   return true;
 }

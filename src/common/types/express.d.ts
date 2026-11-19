@@ -1,13 +1,13 @@
-// Si el usuario decodificado tiene una estructura concreta, puedes adaptarla aquí
+// If the decoded user has a specific shape, adapt it here
 interface UserPayload {
-  userId: number; // o string, dependiendo de cómo guardes el ID en tu JWT
-  // añade aquí más campos si los usas (ej: role: string)
+  userId: number; // or string, depending on how the ID is stored in the JWT
+  // add more fields here if you use them (e.g. role: string)
 }
 
 declare global {
   namespace Express {
     interface Request {
-      user?: UserPayload; // Opcional por si alguna ruta no pasa por auth
+      user?: UserPayload; // Optional in case a route does not go through auth
     }
   }
 }

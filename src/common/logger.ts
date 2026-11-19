@@ -18,7 +18,7 @@ export const logger = pino({
       "token",
       "*.token",
     ],
-    censor: "[OCULTO]",
+    censor: "[REDACTED]",
   },
   ...(isDevelopment && {
     transport: {
