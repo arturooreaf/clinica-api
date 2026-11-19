@@ -4,6 +4,7 @@
   "ignorePaths": [
     "node_modules",
     "dist",
+    "coverage",
     "package-lock.json",
     "docs/postman",
     ".env*"
