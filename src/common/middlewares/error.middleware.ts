@@ -7,8 +7,8 @@ function errorHandle(
   res: Response,
   _next: NextFunction,
 ) {
-  logger.error({ err }, "Error no controlado");
-  res.status(500).json({ error: "Error interno del servidor" });
+  logger.error({ err }, "Unhandled error");
+  res.status(500).json({ error: "Internal server error" });
 }
 
 export default errorHandle;

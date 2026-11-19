@@ -18,7 +18,7 @@ export async function register(
   if (userExisting) {
     logger.warn(
       { email: data.email },
-      "Registro rechazado: el email ya existe",
+      "Registration rejected: email already exists",
     );
     return null;
   }
@@ -31,7 +31,7 @@ export async function register(
     name: data.name,
   });
 
-  logger.info({ userId: newUser.id }, "Usuario registrado");
+  logger.info({ userId: newUser.id }, "User registered");
 
   return { id: newUser.id, email: newUser.email, name: newUser.name };
 }
@@ -39,7 +39,7 @@ export async function register(
 export async function login(data: LoginInput): Promise<LoginResult | null> {
   const user = await userRepository.findByEmail(data.email);
   if (!user) {
-    logger.warn({ email: data.email }, "Login fallido: el email no existe");
+    logger.warn({ email: data.email }, "Login failed: email does not exist");
     return null;
   }
 
@@ -48,13 +48,13 @@ export async function login(data: LoginInput): Promise<LoginResult | null> {
     user.password_hash,
   );
   if (!passwordMatches) {
-    logger.warn({ userId: user.id }, "Login fallido: contraseña incorrecta");
+    logger.warn({ userId: user.id }, "Login failed: wrong password");
     return null;
   }
 
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "1h" });
 
-  logger.info({ userId: user.id }, "Login correcto");
+  logger.info({ userId: user.id }, "Login successful");
 
   return {
     token,

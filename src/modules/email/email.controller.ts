@@ -8,12 +8,12 @@ export async function sendEmail(req: Request, res: Response) {
     const result = await emailService.sendEmail({ to, subject, text });
 
     if (!result) {
-      return res.status(502).json({ error: "No se pudo enviar el correo" });
+      return res.status(502).json({ error: "Could not send email" });
     }
 
     res.status(202).json(result);
   } catch (error) {
-    logger.error({ err: error }, "Error al enviar el correo");
-    res.status(500).json({ error: "Error al enviar el correo" });
+    logger.error({ err: error }, "Error sending email");
+    res.status(500).json({ error: "Error sending email" });
   }
 }

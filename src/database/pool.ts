@@ -7,5 +7,5 @@ export const pool = new Pool({
 });
 
 pool.on("error", (err) => {
-  logger.error({ err }, "Error inesperado en el pool de PostgreSQL");
+  logger.error({ err }, "Unexpected error in the PostgreSQL pool");
 });

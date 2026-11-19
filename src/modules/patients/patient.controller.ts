@@ -6,13 +6,13 @@ export async function getPatients(req: Request, res: Response) {
   try {
     const ownerId = req.user?.userId;
     if (!ownerId) {
-      return res.status(401).json({ error: "No autenticado" });
+      return res.status(401).json({ error: "Not authenticated" });
     }
     const patients = await patientService.listPatients(ownerId);
     res.status(200).json(patients);
   } catch (error) {
-    logger.error({ err: error }, "Error con el servidor");
-    return res.status(500).json({ error: "Error con el servidor" });
+    logger.error({ err: error }, "Server error");
+    return res.status(500).json({ error: "Server error" });
   }
 }
 
@@ -20,30 +20,30 @@ export async function getPatientById(req: Request, res: Response) {
   try {
     const ownerId = req.user?.userId;
     if (!ownerId) {
-      return res.status(401).json({ error: "No autenticado" });
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
-      return res.status(400).json({ error: "El id debe ser un número" });
+      return res.status(400).json({ error: "Id must be a number" });
     }
 
     const patient = await patientService.getPatientById(id);
     if (!patient) {
-      return res.status(404).json({ error: "Paciente no encontrado" });
+      return res.status(404).json({ error: "Patient not found" });
     }
 
-    // ERROR 403: Si el dueño del paciente no eres tú, bloqueamos
+    // 403 ERROR: if you are not the patient's owner, block the request
     if (patient.owner_id !== ownerId) {
       return res
         .status(403)
-        .json({ error: "No tienes permiso para ver este paciente" });
+        .json({ error: "You do not have permission to view this patient" });
     }
 
     res.status(200).json(patient);
   } catch (error) {
-    logger.error({ err: error }, "Error al obtener el paciente");
-    res.status(500).json({ error: "Error al obtener el paciente" });
+    logger.error({ err: error }, "Error getting patient");
+    res.status(500).json({ error: "Error getting patient" });
   }
 }
 
@@ -51,7 +51,7 @@ export async function createPatient(req: Request, res: Response) {
   try {
     const ownerId = req.user?.userId;
     if (!ownerId) {
-      return res.status(401).json({ error: "No autenticado" });
+      return res.status(401).json({ error: "Not authenticated" });
     }
     const { name, age, diagnosis } = req.body;
     const newPatient = await patientService.createPatient(
@@ -64,8 +64,8 @@ export async function createPatient(req: Request, res: Response) {
     );
     res.status(201).json(newPatient);
   } catch (error) {
-    logger.error({ err: error }, "Error al crear el paciente");
-    res.status(500).json({ error: "Error al crear el paciente" });
+    logger.error({ err: error }, "Error creating patient");
+    res.status(500).json({ error: "Error creating patient" });
   }
 }
 
@@ -73,23 +73,23 @@ export async function updatePatient(req: Request, res: Response) {
   try {
     const ownerId = req.user?.userId;
     if (!ownerId) {
-      return res.status(401).json({ error: "No autenticado" });
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
-      return res.status(400).json({ error: "El id debe ser un número" });
+      return res.status(400).json({ error: "Id must be a number" });
     }
 
     const userExistingPatient = await patientService.getPatientById(id);
 
     if (!userExistingPatient) {
-      return res.status(404).json({ error: "Paciente no encontrado" });
+      return res.status(404).json({ error: "Patient not found" });
     }
     if (userExistingPatient.owner_id !== ownerId) {
       return res
         .status(403)
-        .json({ error: "No tienes permiso para modificar a este paciente" });
+        .json({ error: "You do not have permission to update this patient" });
     }
     const { name, age, diagnosis } = req.body;
 
@@ -100,8 +100,8 @@ export async function updatePatient(req: Request, res: Response) {
     });
     res.status(200).json(patient);
   } catch (error) {
-    logger.error({ err: error }, "Error al actualizar el paciente");
-    res.status(500).json({ error: "Error al actualizar el paciente" });
+    logger.error({ err: error }, "Error updating patient");
+    res.status(500).json({ error: "Error updating patient" });
   }
 }
 
@@ -109,27 +109,27 @@ export async function deletePatient(req: Request, res: Response) {
   try {
     const ownerId = req.user?.userId;
     if (!ownerId) {
-      return res.status(401).json({ error: "No autenticado" });
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
     const id = Number(req.params.id);
 
     if (Number.isNaN(id)) {
-      return res.status(400).json({ error: "El id debe ser un número" });
+      return res.status(400).json({ error: "Id must be a number" });
     }
     const userExistingPatient = await patientService.getPatientById(id);
     if (!userExistingPatient) {
-      return res.status(404).json({ error: "Paciente no encontrado" });
+      return res.status(404).json({ error: "Patient not found" });
     }
     if (userExistingPatient.owner_id !== ownerId) {
       return res
         .status(403)
-        .json({ error: "No tienes permiso para borrar el paciente" });
+        .json({ error: "You do not have permission to delete this patient" });
     }
     await patientService.deletePatient(id);
     res.status(204).send();
   } catch (error) {
-    logger.error({ err: error }, "Error al borrar paciente");
-    res.status(500).json({ error: "Error al borrar el paciente" });
+    logger.error({ err: error }, "Error deleting patient");
+    res.status(500).json({ error: "Error deleting patient" });
   }
 }

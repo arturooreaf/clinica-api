@@ -14,10 +14,10 @@ export async function sendEmail(
   });
 
   if (error || !sent) {
-    logger.error({ err: error }, "Resend rechazó el envío");
+    logger.error({ err: error }, "Resend rejected the email");
     return null;
   }
 
-  logger.info({ emailId: sent.id }, "Correo enviado");
+  logger.info({ emailId: sent.id }, "Email sent");
   return { id: sent.id };
 }

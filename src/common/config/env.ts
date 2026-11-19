@@ -1,11 +1,11 @@
 import dotenv from "dotenv";
-const archivo = process.env.NODE_ENV === "test" ? ".env.test" : ".env";
+const envFile = process.env.NODE_ENV === "test" ? ".env.test" : ".env";
 
-dotenv.config({ path: archivo });
+dotenv.config({ path: envFile, quiet: true });
 export function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
-    throw new Error(`La variable de entorno ${name} no está definida`);
+    throw new Error(`Environment variable ${name} is not defined`);
   }
   return value;
 }

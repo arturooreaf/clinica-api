@@ -7,12 +7,12 @@ export async function register(req: Request, res: Response) {
     const { email, password, name } = req.body;
     const newUser = await authService.register({ email, password, name });
     if (!newUser) {
-      return res.status(409).json({ error: "El email ya esta registrado" });
+      return res.status(409).json({ error: "Email is already registered" });
     }
     res.status(201).json(newUser);
   } catch (error) {
-    logger.error({ err: error }, "Error al registrar el usuario");
-    res.status(500).json({ error: "Error al registrar el usuario" });
+    logger.error({ err: error }, "Error registering user");
+    res.status(500).json({ error: "Error registering user" });
   }
 }
 export async function login(req: Request, res: Response) {
@@ -20,11 +20,11 @@ export async function login(req: Request, res: Response) {
     const { email, password } = req.body;
     const result = await authService.login({ email, password });
     if (!result) {
-      return res.status(401).json({ error: "Malas credenciales" });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
     res.status(200).json(result);
   } catch (error) {
-    logger.error({ err: error }, "Error al iniciar sesión");
-    res.status(500).json({ error: "Error al iniciar sesión" });
+    logger.error({ err: error }, "Error logging in");
+    res.status(500).json({ error: "Error logging in" });
   }
 }

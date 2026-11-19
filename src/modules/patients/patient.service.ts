@@ -8,17 +8,17 @@ import {
 
 export async function listPatients(owner_Id: number): Promise<Patient[]> {
   const patients = await patientData.getAll(owner_Id);
-  logger.info({ ownerId: owner_Id }, "Lista de pacientes");
+  logger.info({ ownerId: owner_Id }, "Patients listed");
   return patients;
 }
 
 export async function getPatientById(id: number): Promise<Patient | undefined> {
   const patient = await patientData.getById(id);
   if (!patient) {
-    logger.debug({ patientId: id }, "Paciente no encontrado");
+    logger.debug({ patientId: id }, "Patient not found");
     return undefined;
   }
-  logger.debug({ patientId: id }, "Paciente consultado");
+  logger.debug({ patientId: id }, "Patient retrieved");
   return patient;
 }
 
@@ -27,7 +27,7 @@ export async function createPatient(
   ownerId: number,
 ): Promise<Patient> {
   const patient = await patientData.create(data, ownerId);
-  logger.info({ patientId: patient.id, ownerId }, "Paciente creado");
+  logger.info({ patientId: patient.id, ownerId }, "Patient created");
   return patient;
 }
 
@@ -37,25 +37,19 @@ export async function updatePatient(
 ): Promise<Patient | undefined> {
   const patient = await patientData.update(id, data);
   if (!patient) {
-    logger.warn(
-      { patientId: id },
-      "Actualizacion fallida: el paciente no existe",
-    );
+    logger.warn({ patientId: id }, "Update failed: patient does not exist");
     return undefined;
   }
-  logger.info(
-    { patientId: id, fields: Object.keys(data) },
-    "Paciente actualizado",
-  );
+  logger.info({ patientId: id, fields: Object.keys(data) }, "Patient updated");
   return patient;
 }
 
 export async function deletePatient(id: number): Promise<boolean> {
   const deleted = await patientData.remove(id);
   if (!deleted) {
-    logger.warn({ patientId: id }, "Borrado fallido: el paciente no existe");
+    logger.warn({ patientId: id }, "Delete failed: patient does not exist");
     return false;
   }
-  logger.info({ patientId: id }, "Paciente eliminado");
+  logger.info({ patientId: id }, "Patient deleted");
   return true;
 }

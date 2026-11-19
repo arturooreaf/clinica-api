@@ -34,7 +34,7 @@ Built with Node.js, TypeScript and Express on top of PostgreSQL, using plain SQL
 | **PostgreSQL 16 + `pg`** | Relational database, parameterized SQL queries   |
 | **node-pg-migrate**      | Versioned database migrations                    |
 | **JWT + bcrypt**         | Authentication and password hashing              |
-| **Jest + Supertest**     | Integration tests against a real PostgreSQL      |
+| **Jest + Supertest**     | Unit tests with mocks + tests on real PostgreSQL |
 | **ESLint + Prettier**    | Linting and formatting                           |
 | **Docker**               | Database, API image and full local stack         |
 | **GitHub Actions**       | CI: lint, format, typecheck, build, tests, image |
@@ -71,6 +71,14 @@ src/
     ├── patients/
     ├── appointments/
     └── email/
+
+test/                         One folder per module, one file per feature
+├── setup-env.ts              Fake, random config for every run
+├── helpers.ts                api(), bearer(), signedInAs()
+├── builders.ts               aUser(), aPatient(), anAppointment()
+├── mocks.ts                  Pass-through rate limiters, fake Resend
+├── auth/ patients/ appointments/ emails/ app/
+└── integration/              Real SQL against a *_test database
 ```
 
 Dependencies always point **from modules to `common/`**, never the other way around.
@@ -132,12 +140,19 @@ Protected endpoints require the header `Authorization: Bearer <token>`.
 ## Testing
 
 ```bash
-npm test
+npm test                   # both projects below
+npm run test:unit          # ~1 s, no database needed
+npm run test:integration   # needs PostgreSQL and .env.test
 ```
 
-The test suite runs **against a real PostgreSQL database**, not mocks. Every test starts from empty tables (`TRUNCATE ... CASCADE`), and the suite covers happy paths, validation errors (400), missing or invalid tokens (401), missing resources (404) and **ownership rules**: a user can't access another user's patients.
+The suite has two Jest projects:
 
-Locally, tests read their configuration from `.env.test`. In CI, GitHub Actions starts a PostgreSQL service container, runs the migrations and then the tests on every push.
+- **Unit:** the whole HTTP app through Supertest, with the repositories replaced by mocks (`jest.mock`). Each route is checked for its happy path, validation errors (400), missing, expired or forged tokens (401), **ownership rules** (403), missing resources (404) and database failures that must not leak (500). Pure unit tests cover middlewares and services on their own, and the real rate limiters are tested too.
+- **Integration:** the repositories' SQL against a real PostgreSQL database, plus end-to-end flows (register, log in, manage patients, two physios who can't see each other's patients). Every test starts from empty tables, and the suite refuses to run unless the database name ends in `_test`, so it can never wipe development data.
+
+Known gaps are written as `it.todo(...)`, so `npm test` lists what is still pending.
+
+Locally, the integration tests read `DATABASE_URL` from `.env.test`, for example `postgres://user:password@localhost:5433/clinica_test` (create the database once and run `DATABASE_URL=<that url> npm run migrate up`). In CI, GitHub Actions starts a PostgreSQL service container, runs the migrations and then both projects on every push.
 
 ## Security
 
@@ -150,17 +165,20 @@ Locally, tests read their configuration from `.env.test`. In CI, GitHub Actions 
 
 ## Scripts
 
-| Command                | What it does                        |
-| ---------------------- | ----------------------------------- |
-| `npm run dev`          | Start the server and reload on save |
-| `npm run build`        | Compile TypeScript to `dist/`       |
-| `npm start`            | Run the compiled server             |
-| `npm test`             | Run the test suite                  |
-| `npm run lint`         | Lint with ESLint                    |
-| `npm run format:check` | Check formatting with Prettier      |
-| `npm run typecheck`    | Type-check without emitting files   |
-| `npm run migrate up`   | Apply pending migrations            |
-| `npm run migrate down` | Revert the last migration           |
+| Command                 | What it does                          |
+| ----------------------- | ------------------------------------- |
+| `npm run dev`           | Start the server and reload on save   |
+| `npm run build`         | Compile TypeScript to `dist/`         |
+| `npm start`             | Run the compiled server               |
+| `npm test`              | Run the unit and integration tests    |
+| `npm run test:unit`     | Run only the fast, mocked tests       |
+| `npm run test:watch`    | Re-run the unit tests on save         |
+| `npm run test:coverage` | Run everything with a coverage report |
+| `npm run lint`          | Lint with ESLint                      |
+| `npm run format:check`  | Check formatting with Prettier        |
+| `npm run typecheck`     | Type-check without emitting files     |
+| `npm run migrate up`    | Apply pending migrations              |
+| `npm run migrate down`  | Revert the last migration             |
 
 ## Roadmap
 
@@ -168,7 +186,7 @@ Locally, tests read their configuration from `.env.test`. In CI, GitHub Actions 
 - [x] Authentication with JWT and bcrypt
 - [x] Per-user ownership of patients
 - [x] OpenAPI documentation with Swagger UI
-- [x] Integration tests with Jest and Supertest
+- [x] Unit tests with mocks and integration tests on a real database
 - [x] CI with GitHub Actions and a Docker image
 - [ ] Ownership rules for appointments
 - [ ] Schema-based input validation on every endpoint

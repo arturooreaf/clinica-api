@@ -5,7 +5,7 @@ import {
   UpdatePatientInput,
 } from "../../types/patient.types";
 
-//Leemos todos los resultados.
+// Read all the rows.
 
 export async function getAll(ownerId: number): Promise<Patient[]> {
   const result = await pool.query(
