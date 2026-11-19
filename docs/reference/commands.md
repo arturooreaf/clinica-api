@@ -95,7 +95,7 @@ when exporting.
 ## Automated tests
 
 The tests live in `test/` and run as two Jest projects (see
-`jest.config.js`). Full explanation in `docs/referencia/pruebas.md`.
+`jest.config.js`). Full explanation in `docs/reference/testing.md`.
 
 | Command                    | What it runs                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -270,7 +270,7 @@ Import it into Postman with _Import > Raw text_.
 
 ## Quick manual tests
 
-Full sequence in `docs/referencia/pruebas.md`. The minimum:
+Full sequence in `docs/reference/testing.md`. The minimum:
 
 ```bash
 curl http://localhost:3000/
