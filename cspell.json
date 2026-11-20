@@ -7,7 +7,8 @@
     "coverage",
     "package-lock.json",
     "docs/postman",
-    ".env*"
+    ".env*",
+    ".claude"
   ],
   "words": [
     "bcrypt",
@@ -32,6 +33,36 @@
     "Marta",
     "Martita",
     "Ruiz",
-    "Sánchez"
+    "Sánchez",
+    "Ahora",
+    "Aparcado",
+    "Continuar",
+    "Dudas",
+    "Siguiente",
+    "Skimmable",
+    "acción",
+    "adrs",
+    "aprende",
+    "aqui",
+    "aquí",
+    "cheatsheets",
+    "continuar",
+    "empezar",
+    "entiendo",
+    "expressjs",
+    "hazlo",
+    "mismo",
+    "nada",
+    "pendientes",
+    "pista",
+    "rehabit",
+    "repasar",
+    "revisa",
+    "rápido",
+    "sesion",
+    "subfolders",
+    "terminar",
+    "timestamptz",
+    "turno"
   ]
 }

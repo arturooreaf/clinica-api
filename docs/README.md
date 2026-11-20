@@ -7,10 +7,12 @@ here.
 
 ## Understanding the project
 
-| Document                             | What for                                                                                                                                                                       |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`architecture.md`](architecture.md) | The layers, what each one does and is forbidden to do, the full journey of a request, and the questions I may be asked about the design                                        |
-| [`openapi.yaml`](openapi.yaml)       | The API specification. **Do not move it:** `src/app.ts` reads it on startup with `path.join(__dirname, "../docs/openapi.yaml")`; if it is not there, the server does not start |
+| Document                                           | What for                                                                                                                                                                       |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`architecture.md`](architecture.md)               | The layers, what each one does and is forbidden to do, the full journey of a request, and the questions I may be asked about the design                                        |
+| [`openapi.yaml`](openapi.yaml)                     | The API specification. **Do not move it:** `src/app.ts` reads it on startup with `path.join(__dirname, "../docs/openapi.yaml")`; if it is not there, the server does not start |
+| [`target-architecture.md`](target-architecture.md) | Where the API is going: the gap between today and a production-grade design, code templates and a step-by-step roadmap                                                         |
+| [`mentor-guide.md`](mentor-guide.md)               | How the AI mentor teaches in this repo (session shape, hint ladder, progress file). Agent rules live in [`../AGENTS.md`](../AGENTS.md)                                         |
 
 ---
 
