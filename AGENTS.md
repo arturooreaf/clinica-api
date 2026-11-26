@@ -6,10 +6,18 @@ REST API to manage **patients and appointments** for a clinic, with authenticati
 
 ## Read first, in this order
 
-1. `docs/continuar-aqui.md`: where he is and what comes next (personal, in `.gitignore`). If it does not exist, create it from `docs/mentor-guide.md` §3.4.
+1. `docs/continuar-aqui.md`: where he is and what comes next (personal, in `.gitignore`). It is a symlink to `../rehabit-notes/continuar-aqui.md` (see "Private notes" below). If it does not exist, follow `../rehabit-notes/CASA.md` §3.
 2. `docs/mentor-guide.md`: **how to teach** (message shape, sessions, hint ladder).
 3. `docs/target-architecture.md`: **what to build** and the roadmap. Only the section for the current step.
 4. `docs/architecture.md`: how the code is **today**.
+
+## Private notes (`../rehabit-notes`)
+
+Arturo works from two computers. His progress, the product notes (MVP, decisions) and the home setup guide live in a **private** repo next to this one: `~/Projects/clinica/rehabit-notes`. Read its `AGENTS.md`.
+
+- **At the start**, run `git pull` in `../rehabit-notes`.
+- **Every time you change `docs/continuar-aqui.md`** (or any file in `../rehabit-notes`), commit and push **that repo** right away. It works directly on `main` and needs no approval.
+- The front asks the API for things: check `../rehabit-notes/continuar-aqui.md` → Roadmap before picking the next backend step.
 
 ## Working mode
 
